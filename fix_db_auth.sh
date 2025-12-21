@@ -33,29 +33,23 @@ fi
 echo ""
 echo "Создание пользователя базы данных..."
 
-# Создание SQL скрипта с паролем
-SQL_FILE=$(mktemp)
-cat > "$SQL_FILE" <<EOF
--- Создание базы данных (если еще не создана)
-SELECT 'CREATE DATABASE studd' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'studd')\gexec
+# Экранирование пароля для SQL (замена одинарных кавычек)
+ESCAPED_PASSWORD=$(echo "$DB_PASSWORD" | sed "s/'/''/g")
 
--- Удаление пользователя, если он уже существует (для пересоздания)
-DROP USER IF EXISTS studd_user;
+# Создание базы данных (если еще не создана)
+sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = 'studd'" | grep -q 1 || sudo -u postgres psql -c "CREATE DATABASE studd;"
 
--- Создание нового пользователя
-CREATE USER studd_user WITH PASSWORD '$DB_PASSWORD';
+# Удаление пользователя, если он уже существует (для пересоздания)
+sudo -u postgres psql -c "DROP USER IF EXISTS studd_user;" 2>/dev/null || true
 
--- Настройка параметров пользователя
+# Создание нового пользователя и настройка параметров
+sudo -u postgres psql <<EOF
+CREATE USER studd_user WITH PASSWORD '$ESCAPED_PASSWORD';
 ALTER ROLE studd_user SET client_encoding TO 'utf8';
 ALTER ROLE studd_user SET default_transaction_isolation TO 'read committed';
 ALTER ROLE studd_user SET timezone TO 'UTC';
-
--- Назначение прав на базу данных
 GRANT ALL PRIVILEGES ON DATABASE studd TO studd_user;
 EOF
-
-# Выполнение SQL скрипта
-sudo -u postgres psql -f "$SQL_FILE"
 
 # Назначение прав на схему
 sudo -u postgres psql -d studd <<EOF
@@ -64,18 +58,41 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO studd_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO studd_user;
 EOF
 
-# Удаление временного файла
-rm "$SQL_FILE"
-
-echo ""
-echo "=========================================="
-echo "Пользователь успешно создан!"
-echo "=========================================="
-echo ""
-echo "Обновите файл .env следующими значениями:"
-echo "DB_USER=studd_user"
-echo "DB_PASSWORD=$DB_PASSWORD"
-echo ""
-echo "Проверка подключения:"
-sudo -u postgres psql -c "\du studd_user"
+# Проверка успешности создания пользователя
+if sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='studd_user'" | grep -q 1; then
+    echo ""
+    echo "=========================================="
+    echo "Пользователь успешно создан!"
+    echo "=========================================="
+    echo ""
+    echo "Обновите файл .env следующими значениями:"
+    echo "DB_USER=studd_user"
+    echo "DB_PASSWORD=$DB_PASSWORD"
+    echo ""
+    echo "Проверка подключения:"
+    sudo -u postgres psql -c "\du studd_user"
+    echo ""
+    echo "Тест подключения к БД:"
+    PGPASSWORD="$DB_PASSWORD" psql -U studd_user -d studd -c "SELECT 'Подключение успешно!' AS status;" 2>&1
+else
+    echo ""
+    echo "=========================================="
+    echo "ОШИБКА: Пользователь не был создан!"
+    echo "=========================================="
+    echo ""
+    echo "Попробуйте создать пользователя вручную:"
+    echo "sudo -u postgres psql"
+    echo ""
+    echo "Затем выполните:"
+    echo "CREATE USER studd_user WITH PASSWORD '$ESCAPED_PASSWORD';"
+    echo "GRANT ALL PRIVILEGES ON DATABASE studd TO studd_user;"
+    echo "\\q"
+    echo ""
+    echo "И назначьте права на схему:"
+    echo "sudo -u postgres psql -d studd"
+    echo "GRANT ALL ON SCHEMA public TO studd_user;"
+    echo "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO studd_user;"
+    echo "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO studd_user;"
+    exit 1
+fi
 
