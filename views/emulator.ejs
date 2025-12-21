@@ -1,0 +1,146 @@
+<%- include('partials/header', { title: 'Эмулятор' }) %>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h3 class="card-title mb-0">Эмулятор</h3>
+                <div class="btn-group">
+                    <a href="/tests/favorites" class="btn btn-warning btn-sm">
+                        <i class="bi bi-star-fill"></i> Избранные вопросы
+                    </a>
+                    <a href="/tests/deferred" class="btn btn-info btn-sm">
+                        <i class="bi bi-bookmark-fill"></i> Отложенные вопросы
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <% if (typeof tests !== 'undefined' && tests.length > 0) { %>
+                    <div class="list-group mb-4">
+                        <% tests.forEach(test => { %>
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h5 class="mb-1"><%= test.title %></h5>
+                                    <button class="btn btn-primary btn-sm" onclick="openTestSettings(<%= test.id %>)">Начать тест</button>
+                                </div>
+                                <p class="mb-1">
+                                    <strong>Университет:</strong> <%= test.university %> | 
+                                    <strong>Тип:</strong> <%= test.type %> | 
+                                    <strong>Предмет:</strong> <%= test.subject %> (<%= test.totalQuestions %> заданий)
+                                </p>
+                                <small>Вариант от: <%= test.creator ? test.creator.nickname : 'Неизвестно' %></small>
+                            </div>
+                        <% }); %>
+                    </div>
+                <% } else { %>
+                    <div class="alert alert-info">
+                        Нет доступных тестов.
+                    </div>
+                <% } %>
+            </div>
+        </div>
+
+        <!-- Модальное окно настроек теста -->
+        <div class="modal fade" id="testSettingsModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Настройки теста</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="testSettingsForm">
+                            <input type="hidden" id="testId" name="testId">
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Вопросы:</label>
+                                <select class="form-select" id="questionFilter" name="questionFilter">
+                                    <option value="all">Все</option>
+                                    <option value="not_done">Не сделанные</option>
+                                    <option value="done">Сделанные</option>
+                                    <option value="wrong">Неправильные</option>
+                                    <option value="correct">Правильные</option>
+                                    <option value="marked">Помеченные</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="questionCount" class="form-label">Количество:</label>
+                                <input type="number" class="form-control" id="questionCount" name="questionCount" min="1" value="150">
+                            </div>
+
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="shuffleAnswers" name="shuffleAnswers">
+                                <label class="form-check-label" for="shuffleAnswers">
+                                    Мешать порядок ответов
+                                </label>
+                            </div>
+
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="shuffleQuestions" name="shuffleQuestions">
+                                <label class="form-check-label" for="shuffleQuestions">
+                                    Мешать порядок вопросов
+                                </label>
+                            </div>
+
+                            <div class="mb-3 form-check form-switch">
+                                <input type="checkbox" class="form-check-input" id="showAnswerImmediately" name="showAnswerImmediately">
+                                <label class="form-check-label" for="showAnswerImmediately">
+                                    Ответ сразу
+                                </label>
+                            </div>
+
+                            <div class="mb-3 form-check form-switch">
+                                <input type="checkbox" class="form-check-input" id="enableTimer" name="enableTimer">
+                                <label class="form-check-label" for="enableTimer">
+                                    Таймер
+                                </label>
+                            </div>
+
+                            <div class="mb-3" id="timerSettings" style="display: none;">
+                                <label for="timerMinutes" class="form-label">Время (мин):</label>
+                                <input type="number" class="form-control" id="timerMinutes" name="timerMinutes" min="1" value="60">
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="button" class="btn btn-primary" onclick="startTest()">Начать тест</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openTestSettings(testId) {
+    document.getElementById('testId').value = testId;
+    const modal = new bootstrap.Modal(document.getElementById('testSettingsModal'));
+    modal.show();
+}
+
+document.getElementById('enableTimer').addEventListener('change', function() {
+    document.getElementById('timerSettings').style.display = this.checked ? 'block' : 'none';
+});
+
+function startTest() {
+    const testId = document.getElementById('testId').value;
+    const settings = {
+        questionFilter: document.getElementById('questionFilter').value,
+        questionCount: parseInt(document.getElementById('questionCount').value),
+        shuffleAnswers: document.getElementById('shuffleAnswers').checked,
+        shuffleQuestions: document.getElementById('shuffleQuestions').checked,
+        showAnswerImmediately: document.getElementById('showAnswerImmediately').checked,
+        enableTimer: document.getElementById('enableTimer').checked,
+        timerMinutes: parseInt(document.getElementById('timerMinutes').value) || 60
+    };
+
+    window.location.href = `/tests/emulator/${testId}?settings=${encodeURIComponent(JSON.stringify(settings))}`;
+}
+</script>
+
+<%- include('partials/footer') %>
+
+
+

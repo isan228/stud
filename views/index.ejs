@@ -1,0 +1,245 @@
+<%- include('partials/header', { title: 'Главная' }) %>
+
+<!-- Hero Section -->
+<section class="hero-section mb-5" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%) !important; background-image: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%) !important;">
+    <div class="hero-content text-center text-white py-5" style="color: #ffffff !important; background: transparent !important; background-color: transparent !important;">
+        <div class="container" style="color: #ffffff !important; background: transparent !important; background-color: transparent !important;">
+            <h1 class="display-3 fw-bold mb-4 animate-fade-in" style="color: #ffffff !important;">Добро пожаловать на платформу для студентов!</h1>
+            <p class="lead fs-4 mb-4 animate-slide-up" style="color: #ffffff !important;">Подготовка к тестам, зачетам и экзаменам стала проще и эффективнее</p>
+            <% if (typeof user === 'undefined' || !user) { %>
+                <div class="animate-fade-in-delay" style="color: #ffffff !important;">
+                    <p class="mb-4 fs-5" style="color: #ffffff !important;">Начните свой путь к успешной сдаче экзаменов уже сегодня</p>
+                    <a class="btn btn-light btn-lg me-3 btn-hover-scale" href="/subscription" role="button" style="color: #212529 !important;">
+                        <i class="bi bi-gift" style="color: #212529 !important;"></i> Оформить подписку
+                    </a>
+                    <a class="btn btn-outline-light btn-lg btn-hover-scale" href="/auth/login" role="button" style="color: #ffffff !important; border-color: #ffffff !important;">
+                        <i class="bi bi-box-arrow-in-right" style="color: #ffffff !important;"></i> Войти
+                    </a>
+                </div>
+            <% } else { %>
+                <div class="animate-fade-in-delay" style="color: #ffffff !important;">
+                    <p class="mb-4 fs-5" style="color: #ffffff !important;">Добро пожаловать, <strong style="color: #ffffff !important;"><%= user.nickname %></strong>!</p>
+                    <a class="btn btn-light btn-lg me-3 btn-hover-scale" href="/tests/emulator" role="button" style="color: #212529 !important;">
+                        <i class="bi bi-play-circle" style="color: #212529 !important;"></i> Начать тест
+                    </a>
+                    <a class="btn btn-outline-light btn-lg me-3 btn-hover-scale" href="/profile" role="button" style="color: #ffffff !important; border-color: #ffffff !important;">
+                        <i class="bi bi-person-circle" style="color: #ffffff !important;"></i> Личный кабинет
+                    </a>
+                    <a class="btn btn-outline-light btn-lg btn-hover-scale" href="/tests/statistics" role="button" style="color: #ffffff !important; border-color: #ffffff !important;">
+                        <i class="bi bi-graph-up" style="color: #ffffff !important;"></i> Статистика
+                    </a>
+                </div>
+            <% } %>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="features-section mb-5">
+    <div class="container">
+        <h2 class="text-center mb-5 animate-fade-in">
+            <i class="bi bi-star-fill text-warning"></i> Почему выбирают нас?
+        </h2>
+        <div class="row g-4">
+            <div class="col-md-4 mb-4">
+                <div class="feature-card card h-100 shadow-lg animate-slide-up" data-delay="0">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon mb-3">
+                            <i class="bi bi-book-fill text-primary" style="font-size: 3rem;"></i>
+                        </div>
+                        <h4 class="card-title fw-bold">Большая база тестов</h4>
+                        <p class="card-text">Доступ к тысячам тестов по различным предметам и университетам. Подготовьтесь к любому экзамену с нашей обширной базой знаний.</p>
+                        <ul class="list-unstyled text-start">
+                            <li><i class="bi bi-check-circle-fill text-success"></i> Тесты от реальных преподавателей</li>
+                            <li><i class="bi bi-check-circle-fill text-success"></i> Актуальные материалы</li>
+                            <li><i class="bi bi-check-circle-fill text-success"></i> Постоянное обновление</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="feature-card card h-100 shadow-lg animate-slide-up" data-delay="100">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon mb-3">
+                            <i class="bi bi-graph-up-arrow text-success" style="font-size: 3rem;"></i>
+                        </div>
+                        <h4 class="card-title fw-bold">Умная статистика</h4>
+                        <p class="card-text">Отслеживайте свои результаты в реальном времени, анализируйте ошибки и улучшайте свои знания с помощью детальной аналитики.</p>
+                        <ul class="list-unstyled text-start">
+                            <li><i class="bi bi-check-circle-fill text-success"></i> Детальная статистика по темам</li>
+                            <li><i class="bi bi-check-circle-fill text-success"></i> Графики прогресса</li>
+                            <li><i class="bi bi-check-circle-fill text-success"></i> История всех попыток</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="feature-card card h-100 shadow-lg animate-slide-up" data-delay="200">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon mb-3">
+                            <i class="bi bi-gear-fill text-info" style="font-size: 3rem;"></i>
+                        </div>
+                        <h4 class="card-title fw-bold">Гибкие настройки</h4>
+                        <p class="card-text">Настройте тест под себя: выберите количество вопросов, включите таймер, перемешайте ответы и многое другое.</p>
+                        <ul class="list-unstyled text-start">
+                            <li><i class="bi bi-check-circle-fill text-success"></i> Персонализация тестов</li>
+                            <li><i class="bi bi-check-circle-fill text-success"></i> Режим обучения</li>
+                            <li><i class="bi bi-check-circle-fill text-success"></i> Таймер экзамена</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Additional Features -->
+<section class="additional-features mb-5">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-6 mb-4">
+                <div class="card h-100 shadow animate-slide-right">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="bi bi-clock-history text-primary me-3" style="font-size: 2.5rem;"></i>
+                            <h4 class="mb-0">Работа над ошибками</h4>
+                        </div>
+                        <p>Все ошибочные вопросы сохраняются автоматически. Вы можете пройти отдельный тест только из ошибок, чтобы закрепить материал и улучшить результаты.</p>
+                        <ul>
+                            <li>Автоматическое сохранение ошибок</li>
+                            <li>Тесты из неправильных ответов</li>
+                            <li>Возможность очистить статистику</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card h-100 shadow animate-slide-left">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="bi bi-star-fill text-warning me-3" style="font-size: 2.5rem;"></i>
+                            <h4 class="mb-0">Избранное</h4>
+                        </div>
+                        <p>Помечайте важные или сложные вопросы и соберите из них свой персональный мини-экзамен. Повторяйте до тех пор, пока не станет легко.</p>
+                        <ul>
+                            <li>Сохранение важных вопросов</li>
+                            <li>Персональные тесты</li>
+                            <li>Быстрый доступ к сложным темам</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Statistics Section -->
+<section class="stats-section mb-5">
+    <div class="container">
+        <div class="row g-4 text-center">
+            <div class="col-md-3 col-6">
+                <div class="stat-card p-4 animate-counter">
+                    <i class="bi bi-people-fill text-primary mb-3" style="font-size: 2.5rem;"></i>
+                    <h3 class="fw-bold counter" data-target="10000">0</h3>
+                    <p class="text-muted mb-0">Активных студентов</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="stat-card p-4 animate-counter">
+                    <i class="bi bi-book-half text-success mb-3" style="font-size: 2.5rem;"></i>
+                    <h3 class="fw-bold counter" data-target="5000">0</h3>
+                    <p class="text-muted mb-0">Тестов в базе</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="stat-card p-4 animate-counter">
+                    <i class="bi bi-mortarboard-fill text-info mb-3" style="font-size: 2.5rem;"></i>
+                    <h3 class="fw-bold counter" data-target="150">0</h3>
+                    <p class="text-muted mb-0">Университетов</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="stat-card p-4 animate-counter">
+                    <i class="bi bi-check-circle-fill text-warning mb-3" style="font-size: 2.5rem;"></i>
+                    <h3 class="fw-bold counter" data-target="95">0</h3>
+                    <p class="text-muted mb-0">% успешной сдачи</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- About Section -->
+<section class="about-section mb-5">
+    <div class="container">
+        <div class="card shadow-lg animate-fade-in">
+            <div class="card-body p-5">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h2 class="mb-4">
+                            <i class="bi bi-info-circle-fill text-primary"></i> О платформе
+                        </h2>
+                        <p class="lead">Данный проект создан для помощи в подготовке к различным тестированиям, зачетам, экзаменам всем желающим.</p>
+                        <p>Платформа предоставляет удобные инструменты для эффективной подготовки к экзаменам с возможностью отслеживания прогресса и работы над ошибками. Мы понимаем, насколько важна качественная подготовка, поэтому создали систему, которая адаптируется под ваши потребности.</p>
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <h5><i class="bi bi-check2-circle text-success"></i> Наши преимущества:</h5>
+                                <ul>
+                                    <li>Современные форматы вопросов</li>
+                                    <li>Интуитивный интерфейс</li>
+                                    <li>Мобильная адаптивность</li>
+                                    <li>Регулярные обновления</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h5><i class="bi bi-lightning-charge-fill text-warning"></i> Быстрый старт:</h5>
+                                <ol>
+                                    <li>Зарегистрируйтесь за минуту</li>
+                                    <li>Выберите интересующий тест</li>
+                                    <li>Настройте параметры прохождения</li>
+                                    <li>Начните подготовку прямо сейчас!</li>
+                                </ol>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <a href="/help" class="btn btn-primary btn-lg me-3 btn-hover-scale">
+                                <i class="bi bi-question-circle"></i> Узнать больше
+                            </a>
+                            <a href="/subscription" class="btn btn-outline-primary btn-lg btn-hover-scale">
+                                <i class="bi bi-gift"></i> Подписка
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <div class="about-image p-4">
+                            <i class="bi bi-mortarboard" style="font-size: 10rem; color: #0d6efd; opacity: 0.3;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<% if (typeof user === 'undefined' || !user) { %>
+<section class="cta-section mb-5">
+    <div class="container">
+        <div class="card bg-gradient-primary text-white shadow-lg animate-pulse-slow">
+            <div class="card-body p-5 text-center">
+                <h2 class="mb-4">Готовы начать подготовку?</h2>
+                <p class="lead mb-4">Присоединяйтесь к тысячам студентов, которые уже используют нашу платформу для успешной сдачи экзаменов</p>
+                <a href="/subscription" class="btn btn-light btn-lg btn-hover-scale me-3">
+                    <i class="bi bi-gift"></i> Оформить подписку
+                </a>
+                <a href="/help" class="btn btn-outline-light btn-lg btn-hover-scale">
+                    <i class="bi bi-info-circle"></i> Как это работает?
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+<% } %>
+
+<%- include('partials/footer') %>
+

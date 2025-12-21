@@ -1,0 +1,75 @@
+<%- include('../partials/header', { title: 'Управление предметами' }) %>
+
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <h2 class="mb-0"><i class="bi bi-folder-fill text-primary"></i> Предметы</h2>
+        <a href="/admin/subjects/new" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Добавить предмет
+        </a>
+    </div>
+</div>
+
+<% if (typeof query !== 'undefined' && query.success) { %>
+    <div class="alert alert-success alert-dismissible fade show">
+        <%= query.success %>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+<% } %>
+
+<% if (typeof query !== 'undefined' && query.error) { %>
+    <div class="alert alert-danger alert-dismissible fade show">
+        <%= query.error %>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+<% } %>
+
+<div class="row g-4">
+    <% if (subjects && subjects.length > 0) { %>
+        <% subjects.forEach(subject => { %>
+            <div class="col-md-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><%= subject.name %></h5>
+                    </div>
+                    <div class="card-body">
+                        <% if (subject.description) { %>
+                            <p class="text-muted"><%= subject.description %></p>
+                        <% } %>
+                        <p class="mb-2">
+                            <strong>Тестов:</strong> <%= subject.Tests ? subject.Tests.length : 0 %>
+                        </p>
+                        <div class="d-flex gap-2">
+                            <a href="/admin/subjects/<%= subject.id %>/questions" class="btn btn-sm btn-primary flex-fill">
+                                <i class="bi bi-question-circle"></i> Вопросы
+                            </a>
+                            <form method="POST" action="/admin/subjects/<%= subject.id %>/delete" class="d-inline" onsubmit="return confirm('Вы уверены, что хотите удалить этот предмет?');">
+                                <button type="submit" class="btn btn-sm btn-danger">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <% }); %>
+    <% } else { %>
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> Предметы еще не добавлены. 
+                <a href="/admin/subjects/new">Добавить первый предмет</a>
+            </div>
+        </div>
+    <% } %>
+</div>
+
+<div class="mt-4">
+    <a href="/admin" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Назад в панель
+    </a>
+</div>
+
+<%- include('../partials/footer') %>
+
+
+
+

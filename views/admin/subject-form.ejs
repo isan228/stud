@@ -1,0 +1,52 @@
+<%- include('../partials/header', { title: 'Добавить предмет' }) %>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-folder-plus"></i> Добавить предмет</h4>
+            </div>
+            <div class="card-body">
+                <% if (typeof errors !== 'undefined' && errors.length > 0) { %>
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">
+                            <% errors.forEach(error => { %>
+                                <li><%= error.msg %></li>
+                            <% }); %>
+                        </ul>
+                    </div>
+                <% } %>
+
+                <form method="POST" action="/admin/subjects">
+                    <div class="mb-3">
+                        <label for="name" class="form-label fw-bold">Название предмета *</label>
+                        <input type="text" class="form-control form-control-lg" id="name" name="name" 
+                               value="<%= subject ? subject.name : '' %>" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label fw-bold">Описание</label>
+                        <textarea class="form-control" id="description" name="description" rows="4"><%= subject ? subject.description : '' %></textarea>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-check-circle"></i> Сохранить и добавить вопросы
+                        </button>
+                        <a href="/admin/subjects" class="btn btn-outline-secondary btn-lg">
+                            <i class="bi bi-x-circle"></i> Отмена
+                        </a>
+                    </div>
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> После сохранения вы сможете сразу добавить вопросы к этому предмету
+                        </small>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/footer') %>
+

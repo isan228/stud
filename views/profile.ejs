@@ -1,0 +1,92 @@
+<%- include('partials/header', { title: 'Личный кабинет' }) %>
+
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h3 class="card-title mb-0">Личный кабинет</h3>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <h5>Ник: <span class="text-muted"><%= user.nickname %></span></h5>
+                    <h5>Почта: <span class="text-muted"><%= user.email %></span></h5>
+                    <h5>Зарегистрирован: <span class="text-muted"><%= new Date(user.createdAt).toLocaleDateString('ru-RU') %></span></h5>
+                    <% if (user.isSubscribed) { %>
+                        <h5>Подписка активна до: <span class="text-success"><%= new Date(user.subscriptionEndDate).toLocaleDateString('ru-RU') %></span></h5>
+                    <% } else { %>
+                        <h5>Подписка: <span class="text-danger">Не активна</span></h5>
+                    <% } %>
+                </div>
+
+                <hr>
+
+                <h5 class="mb-3">Сменить пароль</h5>
+                <% if (typeof passwordError !== 'undefined' && passwordError) { %>
+                    <div class="alert alert-danger">
+                        <%= passwordError %>
+                    </div>
+                <% } %>
+                <% if (typeof passwordSuccess !== 'undefined' && passwordSuccess) { %>
+                    <div class="alert alert-success">
+                        <%= passwordSuccess %>
+                    </div>
+                <% } %>
+
+                <form method="POST" action="/profile/change-password">
+                    <div class="mb-3">
+                        <label for="currentPassword" class="form-label">Текущий пароль:</label>
+                        <input type="password" class="form-control" id="currentPassword" name="currentPassword" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label">Новый пароль:</label>
+                        <input type="password" class="form-control" id="newPassword" name="newPassword" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">Подтверждение пароля:</label>
+                        <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Изменить пароль</button>
+                </form>
+
+                <hr>
+
+                <% if (typeof query !== 'undefined' && query.success) { %>
+                    <div class="alert alert-success alert-dismissible fade show">
+                        <%= query.success %>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <% } %>
+
+                <div class="card shadow mb-3">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="bi bi-wallet2"></i> Бонусы</h5>
+                    </div>
+                    <div class="card-body">
+                        <h3 class="text-success mb-3"><%= user.bonusBalance || 0 %> сом</h3>
+                        <p class="text-muted mb-3">1 бонус = 1 сом. Используйте бонусы для оплаты подписки!</p>
+                        <a href="/referral" class="btn btn-success">
+                            <i class="bi bi-gift"></i> Реферальная программа
+                        </a>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="alert alert-warning alert-permanent">
+                    <strong>НИКОМУ НЕ СООБЩАЙТЕ СВОЙ ПАРОЛЬ.</strong>
+                </div>
+
+                <div class="alert alert-danger alert-permanent">
+                    <strong>ВХОД С БОЛЕЕ ЧЕМ 1 УСТРОЙСТВА КАРАЕТСЯ БАНОМ</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('partials/footer') %>
+
+

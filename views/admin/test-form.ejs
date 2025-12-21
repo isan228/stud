@@ -1,0 +1,62 @@
+<%- include('../partials/header', { title: 'Добавить тест' }) %>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-file-earmark-plus"></i> Добавить тест</h4>
+                <small>Предмет: <%= subject.name %></small>
+            </div>
+            <div class="card-body">
+                <% if (typeof errors !== 'undefined' && errors.length > 0) { %>
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">
+                            <% errors.forEach(error => { %>
+                                <li><%= error.msg %></li>
+                            <% }); %>
+                        </ul>
+                    </div>
+                <% } %>
+
+                <form method="POST" action="/admin/subjects/<%= subject.id %>/tests">
+                    <div class="mb-3">
+                        <label for="title" class="form-label fw-bold">Название теста *</label>
+                        <input type="text" class="form-control form-control-lg" id="title" name="title" 
+                               value="<%= test ? test.title : '' %>" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="university" class="form-label fw-bold">Университет *</label>
+                        <input type="text" class="form-control form-control-lg" id="university" name="university" 
+                               value="<%= test ? test.university : '' %>" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="type" class="form-label fw-bold">Тип теста *</label>
+                        <select class="form-select form-select-lg" id="type" name="type" required>
+                            <option value="">Выберите тип</option>
+                            <option value="Экзамен" <%= test && test.type === 'Экзамен' ? 'selected' : '' %>>Экзамен</option>
+                            <option value="Зачет" <%= test && test.type === 'Зачет' ? 'selected' : '' %>>Зачет</option>
+                            <option value="Тест" <%= test && test.type === 'Тест' ? 'selected' : '' %>>Тест</option>
+                        </select>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-check-circle"></i> Создать тест
+                        </button>
+                        <a href="/admin/subjects/<%= subject.id %>/questions" class="btn btn-outline-secondary btn-lg">
+                            <i class="bi bi-x-circle"></i> Отмена
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/footer') %>
+
+
+
+

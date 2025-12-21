@@ -1,0 +1,17 @@
+<%- include('partials/header', { title: 'Ошибка' }) %>
+
+<div class="row">
+    <div class="col-12">
+        <div class="alert alert-danger">
+            <h4>Произошла ошибка</h4>
+            <p><%= typeof error !== 'undefined' ? error : 'Неизвестная ошибка' %></p>
+            <a href="/" class="btn btn-primary">Вернуться на главную</a>
+        </div>
+    </div>
+</div>
+
+<%- include('partials/footer') %>
+
+
+
+

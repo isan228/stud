@@ -1,0 +1,487 @@
+<%- include('partials/header', { title: 'Прохождение теста' }) %>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow mb-3">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><%= test.title %></h4>
+                <div class="d-flex align-items-center gap-3">
+                    <div id="deferredBadge" class="badge bg-warning" style="display: none;">
+                        <i class="bi bi-bookmark"></i> <span id="deferredCount">0</span> отложено
+                    </div>
+                    <div id="timer" class="text-white"></div>
+                </div>
+            </div>
+            <div class="card-body">
+                <p><strong>Университет:</strong> <%= test.university %> | <strong>Тип:</strong> <%= test.type %> | <strong>Предмет:</strong> <%= test.subject %></p>
+                <p>Вариант от: <%= test.creator ? test.creator.nickname : 'Неизвестно' %></p>
+                <div class="mt-2">
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="showDeferredQuestions()">
+                        <i class="bi bi-bookmark-fill"></i> Отложенные вопросы
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-success" onclick="showFavoriteQuestions()">
+                        <i class="bi bi-star-fill"></i> Избранные вопросы
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <form id="testForm">
+            <input type="hidden" id="testId" value="<%= test.id %>">
+            <div id="questionsContainer"></div>
+
+            <div class="card shadow mt-3">
+                <div class="card-body">
+                    <button type="button" class="btn btn-primary" onclick="submitTest()">Завершить тест</button>
+                    <button type="button" class="btn btn-secondary" onclick="reportError()">Сообщить об ошибке</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Модальное окно для сообщения об ошибке -->
+<div class="modal fade" id="errorReportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Сообщить об ошибке</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="errorQuestionId" class="form-label">Номер вопроса (если применимо):</label>
+                    <input type="number" class="form-control" id="errorQuestionId" name="errorQuestionId">
+                </div>
+                <div class="mb-3">
+                    <label for="errorMessage" class="form-label">Опишите проблему:</label>
+                    <textarea class="form-control" id="errorMessage" name="errorMessage" rows="4" required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" onclick="sendErrorReport()">Отправить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const testId = <%= test.id %>;
+const questions = <%- JSON.stringify(test.Questions) %>;
+let startTime = Date.now();
+let timerInterval = null;
+let timeLimit = null;
+
+// Парсинг настроек из URL
+const urlParams = new URLSearchParams(window.location.search);
+const settingsParam = urlParams.get('settings');
+let settings = {};
+if (settingsParam) {
+    settings = JSON.parse(decodeURIComponent(settingsParam));
+    if (settings.enableTimer) {
+        timeLimit = settings.timerMinutes * 60 * 1000; // в миллисекундах
+        startTimer();
+    }
+}
+
+function startTimer() {
+    if (!timeLimit) return;
+    
+    const endTime = startTime + timeLimit;
+    timerInterval = setInterval(() => {
+        const now = Date.now();
+        const remaining = Math.max(0, endTime - now);
+        
+        if (remaining === 0) {
+            clearInterval(timerInterval);
+            alert('Время вышло!');
+            submitTest();
+            return;
+        }
+        
+        const minutes = Math.floor(remaining / 60000);
+        const seconds = Math.floor((remaining % 60000) / 1000);
+        document.getElementById('timer').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }, 1000);
+}
+
+async function renderQuestions() {
+    let questionsToShow = questions;
+    
+    // Получаем отложенные вопросы
+    let deferredQuestions = [];
+    try {
+        const deferredResponse = await fetch('/api/deferred/all');
+        const deferredData = await deferredResponse.json();
+        if (deferredData.questions && deferredData.questions.length > 0) {
+            deferredQuestions = deferredData.questions;
+            // Убираем отложенные вопросы из основного списка
+            const deferredIds = deferredQuestions.map(q => q.id);
+            questionsToShow = questionsToShow.filter(q => !deferredIds.includes(q.id));
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки отложенных:', error);
+    }
+    
+    // Применение фильтров и ограничений
+    if (settings.questionCount && settings.questionCount < questionsToShow.length) {
+        questionsToShow = questionsToShow.slice(0, settings.questionCount);
+    }
+    
+    if (settings.shuffleQuestions) {
+        questionsToShow = [...questionsToShow].sort(() => Math.random() - 0.5);
+    }
+    
+    const container = document.getElementById('questionsContainer');
+    
+    // Рендерим обычные вопросы
+    questionsToShow.forEach((question, index) => {
+        const questionDiv = document.createElement('div');
+        questionDiv.className = 'card mb-3';
+        questionDiv.id = `question-${question.id}`;
+        questionDiv.innerHTML = `
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Вопрос ${index + 1}</h5>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-sm btn-outline-warning favorite-btn" 
+                            data-question-id="${question.id}" onclick="toggleFavorite(${question.id})">
+                        <i class="bi bi-star" id="favorite-icon-${question.id}"></i> В избранное
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-info deferred-btn" 
+                            data-question-id="${question.id}" onclick="toggleDeferred(${question.id})">
+                        <i class="bi bi-bookmark" id="deferred-icon-${question.id}"></i> Отложить
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <p>${question.text}</p>
+                ${question.imageUrl ? `<img src="${question.imageUrl}" class="img-fluid mb-3" alt="Изображение вопроса">` : ''}
+                <div class="answers" data-question-id="${question.id}">
+                    ${renderAnswers(question)}
+                </div>
+            </div>
+        `;
+        container.appendChild(questionDiv);
+        
+        // Проверяем статус избранного и отложенного
+        checkQuestionStatus(question.id);
+    });
+    
+    // Рендерим отложенные вопросы в конце
+    if (deferredQuestions.length > 0) {
+        const separatorDiv = document.createElement('div');
+        separatorDiv.className = 'card mb-3 border-warning';
+        separatorDiv.innerHTML = `
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="bi bi-bookmark-fill"></i> Отложенные вопросы</h5>
+            </div>
+        `;
+        container.appendChild(separatorDiv);
+        
+        deferredQuestions.forEach((question, index) => {
+            const questionDiv = document.createElement('div');
+            questionDiv.className = 'card mb-3 border-warning';
+            questionDiv.id = `question-${question.id}`;
+            questionDiv.innerHTML = `
+                <div class="card-header d-flex justify-content-between align-items-center bg-warning bg-opacity-25">
+                    <h5 class="mb-0">Отложенный вопрос ${index + 1}</h5>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm btn-outline-warning favorite-btn" 
+                                data-question-id="${question.id}" onclick="toggleFavorite(${question.id})">
+                            <i class="bi bi-star" id="favorite-icon-${question.id}"></i> В избранное
+                        </button>
+                        <button type="button" class="btn btn-sm btn-info deferred-btn" 
+                                data-question-id="${question.id}" onclick="toggleDeferred(${question.id})">
+                            <i class="bi bi-bookmark-fill" id="deferred-icon-${question.id}"></i> Отложено
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p>${question.text}</p>
+                    ${question.imageUrl ? `<img src="${question.imageUrl}" class="img-fluid mb-3" alt="Изображение вопроса">` : ''}
+                    <div class="answers" data-question-id="${question.id}">
+                        ${renderAnswers(question)}
+                    </div>
+                </div>
+            `;
+            container.appendChild(questionDiv);
+            
+            // Проверяем статус избранного
+            checkQuestionStatus(question.id);
+            
+            // Устанавливаем статус отложенного
+            const deferredIcon = document.getElementById(`deferred-icon-${question.id}`);
+            const deferredBtn = document.querySelector(`.deferred-btn[data-question-id="${question.id}"]`);
+            if (deferredIcon && deferredBtn) {
+                deferredIcon.classList.remove('bi-bookmark');
+                deferredIcon.classList.add('bi-bookmark-fill');
+                deferredBtn.classList.remove('btn-outline-info');
+                deferredBtn.classList.add('btn-info');
+            }
+        });
+    }
+}
+
+function renderAnswers(question) {
+    let answers = question.Answers || [];
+    
+    if (settings.shuffleAnswers) {
+        answers = [...answers].sort(() => Math.random() - 0.5);
+    }
+    
+    if (question.type === 'single') {
+        return answers.map(answer => `
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="question_${question.id}" id="answer_${answer.id}" value="${answer.id}">
+                <label class="form-check-label" for="answer_${answer.id}">
+                    ${answer.text}
+                </label>
+            </div>
+        `).join('');
+    } else if (question.type === 'multiple') {
+        return answers.map(answer => `
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="question_${question.id}" id="answer_${answer.id}" value="${answer.id}">
+                <label class="form-check-label" for="answer_${answer.id}">
+                    ${answer.text}
+                </label>
+            </div>
+        `).join('');
+    } else if (question.type === 'text') {
+        return `
+            <textarea class="form-control" name="question_${question.id}" rows="3"></textarea>
+        `;
+    }
+    return '';
+}
+
+function submitTest() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+    
+    const formData = new FormData(document.getElementById('testForm'));
+    const answers = {};
+    
+    questions.forEach(question => {
+        const questionInputs = document.querySelectorAll(`[name="question_${question.id}"]`);
+        if (question.type === 'multiple') {
+            const checked = Array.from(questionInputs).filter(input => input.checked).map(input => input.value);
+            if (checked.length > 0) {
+                answers[question.id] = checked;
+            }
+        } else if (question.type === 'single') {
+            const checked = Array.from(questionInputs).find(input => input.checked);
+            if (checked) {
+                answers[question.id] = checked.value;
+            }
+        } else if (question.type === 'text') {
+            const value = questionInputs[0]?.value;
+            if (value) {
+                answers[question.id] = value;
+            }
+        }
+    });
+    
+    const timeSpent = Math.floor((Date.now() - startTime) / 1000);
+    
+    fetch(`/tests/emulator/${testId}/submit`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            answers,
+            timeSpent,
+            settings
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = `/tests/statistics/${data.resultId}`;
+        } else {
+            alert('Ошибка при сохранении результата');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Ошибка при сохранении результата');
+    });
+}
+
+function reportError() {
+    const modal = new bootstrap.Modal(document.getElementById('errorReportModal'));
+    modal.show();
+}
+
+function sendErrorReport() {
+    const questionId = document.getElementById('errorQuestionId').value;
+    const message = document.getElementById('errorMessage').value;
+    
+    if (!message.trim()) {
+        alert('Пожалуйста, опишите проблему');
+        return;
+    }
+    
+    fetch('/tests/emulator/report-error', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            testId,
+            questionId: questionId || null,
+            message
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Сообщение отправлено. Спасибо!');
+            bootstrap.Modal.getInstance(document.getElementById('errorReportModal')).hide();
+            document.getElementById('errorMessage').value = '';
+            document.getElementById('errorQuestionId').value = '';
+        } else {
+            alert('Ошибка при отправке сообщения');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Ошибка при отправке сообщения');
+    });
+}
+
+// Функции для работы с избранным
+async function toggleFavorite(questionId) {
+    const icon = document.getElementById(`favorite-icon-${questionId}`);
+    const btn = document.querySelector(`.favorite-btn[data-question-id="${questionId}"]`);
+    const isFavorite = icon.classList.contains('bi-star-fill');
+    
+    try {
+        const response = await fetch(isFavorite ? '/api/favorite/remove' : '/api/favorite/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ questionId })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            if (isFavorite) {
+                icon.classList.remove('bi-star-fill');
+                icon.classList.add('bi-star');
+                btn.classList.remove('btn-warning');
+                btn.classList.add('btn-outline-warning');
+            } else {
+                icon.classList.remove('bi-star');
+                icon.classList.add('bi-star-fill');
+                btn.classList.remove('btn-outline-warning');
+                btn.classList.add('btn-warning');
+            }
+        }
+    } catch (error) {
+        console.error('Ошибка:', error);
+        alert('Ошибка при изменении статуса избранного');
+    }
+}
+
+async function checkQuestionStatus(questionId) {
+    try {
+        // Проверка избранного
+        const favoriteResponse = await fetch(`/api/favorite/check/${questionId}`);
+        const favoriteData = await favoriteResponse.json();
+        
+        if (favoriteData.isFavorite) {
+            const icon = document.getElementById(`favorite-icon-${questionId}`);
+            const btn = document.querySelector(`.favorite-btn[data-question-id="${questionId}"]`);
+            if (icon && btn) {
+                icon.classList.remove('bi-star');
+                icon.classList.add('bi-star-fill');
+                btn.classList.remove('btn-outline-warning');
+                btn.classList.add('btn-warning');
+            }
+        }
+        
+        // Проверка отложенных (из сессии)
+        updateDeferredBadge();
+    } catch (error) {
+        console.error('Ошибка проверки статуса:', error);
+    }
+}
+
+// Функции для работы с отложенными вопросами
+async function toggleDeferred(questionId) {
+    const icon = document.getElementById(`deferred-icon-${questionId}`);
+    const btn = document.querySelector(`.deferred-btn[data-question-id="${questionId}"]`);
+    const isDeferred = icon.classList.contains('bi-bookmark-fill');
+    
+    try {
+        const response = await fetch(isDeferred ? '/api/deferred/remove' : '/api/deferred/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ questionId })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            if (isDeferred) {
+                icon.classList.remove('bi-bookmark-fill');
+                icon.classList.add('bi-bookmark');
+                btn.classList.remove('btn-info');
+                btn.classList.add('btn-outline-info');
+            } else {
+                icon.classList.remove('bi-bookmark');
+                icon.classList.add('bi-bookmark-fill');
+                btn.classList.remove('btn-outline-info');
+                btn.classList.add('btn-info');
+            }
+            updateDeferredBadge();
+        }
+    } catch (error) {
+        console.error('Ошибка:', error);
+        alert('Ошибка при изменении статуса отложенного');
+    }
+}
+
+async function updateDeferredBadge() {
+    try {
+        const response = await fetch('/api/deferred/all');
+        const data = await response.json();
+        const count = data.questions ? data.questions.length : 0;
+        
+        const badge = document.getElementById('deferredBadge');
+        const countSpan = document.getElementById('deferredCount');
+        
+        if (count > 0) {
+            badge.style.display = 'block';
+            countSpan.textContent = count;
+        } else {
+            badge.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Ошибка обновления бейджа:', error);
+    }
+}
+
+function showDeferredQuestions() {
+    window.location.href = '/tests/deferred';
+}
+
+function showFavoriteQuestions() {
+    window.location.href = '/tests/favorites';
+}
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', async () => {
+    await renderQuestions();
+    updateDeferredBadge();
+});
+</script>
+
+<%- include('partials/footer') %>
+
+
+

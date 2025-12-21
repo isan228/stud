@@ -1,0 +1,279 @@
+<%- include('partials/header', { title: 'Реферальная программа' }) %>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="mb-0"><i class="bi bi-gift-fill text-primary"></i> Реферальная программа</h2>
+        <p class="text-muted">Приглашайте друзей и получайте бонусы за их подписки!</p>
+    </div>
+</div>
+
+<!-- Статистика -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card shadow-lg text-center">
+            <div class="card-body p-4">
+                <i class="bi bi-wallet2 text-success mb-3" style="font-size: 3rem;"></i>
+                <h3 class="fw-bold text-success"><%= user.bonusBalance %> сом</h3>
+                <p class="text-muted mb-0">Баланс бонусов</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-lg text-center">
+            <div class="card-body p-4">
+                <i class="bi bi-people-fill text-primary mb-3" style="font-size: 3rem;"></i>
+                <h3 class="fw-bold"><%= activeReferrals %></h3>
+                <p class="text-muted mb-0">Активных рефералов</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-lg text-center">
+            <div class="card-body p-4">
+                <i class="bi bi-check-circle-fill text-info mb-3" style="font-size: 3rem;"></i>
+                <h3 class="fw-bold"><%= completedReferrals %></h3>
+                <p class="text-muted mb-0">Купили подписку</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Реферальная ссылка -->
+<div class="card shadow-lg mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-link-45deg"></i> Ваша реферальная ссылка</h5>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <label class="form-label fw-bold">Реферальный код:</label>
+            <div class="input-group">
+                <input type="text" class="form-control form-control-lg" id="referralCode" 
+                       value="<%= user.referralCode %>" readonly>
+                <button class="btn btn-primary" type="button" onclick="copyReferralCode()">
+                    <i class="bi bi-clipboard"></i> Копировать код
+                </button>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold">Реферальная ссылка:</label>
+            <div class="input-group">
+                <input type="text" class="form-control form-control-lg" id="referralLink" 
+                       value="<%= referralLink %>" readonly>
+                <button class="btn btn-primary" type="button" onclick="copyReferralLink()">
+                    <i class="bi bi-clipboard"></i> Копировать ссылку
+                </button>
+            </div>
+        </div>
+        <div class="alert alert-info alert-permanent mb-0">
+            <h6><i class="bi bi-info-circle"></i> Как это работает:</h6>
+            <ul class="mb-0">
+                <li>Поделитесь ссылкой с друзьями</li>
+                <li>Когда они зарегистрируются и купят первую подписку, вы оба получите по <strong>50 бонусов</strong></li>
+                <li>Связь действительна <strong>7 дней</strong> с момента регистрации</li>
+                <li>Бонусы можно использовать для оплаты подписки (1 бонус = 1 сом)</li>
+                <li>Бонусы действуют <strong>6 месяцев</strong> с момента получения</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Активные бонусы -->
+<% if (activeBonuses && activeBonuses.length > 0) { %>
+<div class="card shadow-lg mb-4">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="bi bi-clock-history"></i> Активные бонусы</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Сумма</th>
+                        <th>Тип</th>
+                        <th>Описание</th>
+                        <th>Дата получения</th>
+                        <th>Истекает</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% activeBonuses.forEach(bonus => { %>
+                        <tr>
+                            <td><strong class="text-success">+<%= bonus.amount %> сом</strong></td>
+                            <td>
+                                <% if (bonus.type === 'referral_bonus') { %>
+                                    <span class="badge bg-primary">За приглашение</span>
+                                <% } else if (bonus.type === 'referral_received') { %>
+                                    <span class="badge bg-info">За регистрацию</span>
+                                <% } %>
+                            </td>
+                            <td><%= bonus.description %></td>
+                            <td><%= new Date(bonus.createdAt).toLocaleDateString('ru-RU') %></td>
+                            <td>
+                                <span class="text-warning">
+                                    <%= new Date(bonus.expiresAt).toLocaleDateString('ru-RU') %>
+                                </span>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<% } %>
+
+<!-- История транзакций -->
+<div class="card shadow-lg mb-4">
+    <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0"><i class="bi bi-list-ul"></i> История транзакций</h5>
+    </div>
+    <div class="card-body">
+        <% if (transactions && transactions.length > 0) { %>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Дата</th>
+                            <th>Сумма</th>
+                            <th>Тип</th>
+                            <th>Описание</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% transactions.forEach(transaction => { %>
+                            <tr>
+                                <td><%= new Date(transaction.createdAt).toLocaleString('ru-RU') %></td>
+                                <td>
+                                    <% if (transaction.amount > 0) { %>
+                                        <span class="text-success">+<%= transaction.amount %> сом</span>
+                                    <% } else { %>
+                                        <span class="text-danger"><%= transaction.amount %> сом</span>
+                                    <% } %>
+                                </td>
+                                <td>
+                                    <% if (transaction.type === 'referral_bonus') { %>
+                                        <span class="badge bg-primary">За приглашение</span>
+                                    <% } else if (transaction.type === 'referral_received') { %>
+                                        <span class="badge bg-info">За регистрацию</span>
+                                    <% } else if (transaction.type === 'subscription_payment') { %>
+                                        <span class="badge bg-warning">Оплата подписки</span>
+                                    <% } else if (transaction.type === 'expiration') { %>
+                                        <span class="badge bg-danger">Истечение</span>
+                                    <% } %>
+                                </td>
+                                <td><%= transaction.description || '-' %></td>
+                            </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+            </div>
+        <% } else { %>
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> У вас пока нет транзакций
+            </div>
+        <% } %>
+    </div>
+</div>
+
+<!-- Список рефералов -->
+<div class="card shadow-lg">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-people"></i> Ваши рефералы</h5>
+    </div>
+    <div class="card-body">
+        <% if (referrals && referrals.length > 0) { %>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Никнейм</th>
+                            <th>Email</th>
+                            <th>Дата регистрации</th>
+                            <th>Статус</th>
+                            <th>Бонусы</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% referrals.forEach(referral => { %>
+                            <tr>
+                                <td><strong><%= referral.referred ? referral.referred.nickname : 'Удалён' %></strong></td>
+                                <td><%= referral.referred ? referral.referred.email : '-' %></td>
+                                <td><%= referral.referred ? new Date(referral.referred.createdAt).toLocaleDateString('ru-RU') : '-' %></td>
+                                <td>
+                                    <% if (referral.hasPurchased) { %>
+                                        <span class="badge bg-success">Купил подписку</span>
+                                    <% } else if (referral.isActive) { %>
+                                        <span class="badge bg-warning">Ожидает покупки</span>
+                                        <small class="text-muted d-block">
+                                            До: <%= new Date(referral.expiresAt).toLocaleDateString('ru-RU') %>
+                                        </small>
+                                    <% } else { %>
+                                        <span class="badge bg-secondary">Истекла</span>
+                                    <% } %>
+                                </td>
+                                <td>
+                                    <% if (referral.bonusPaid) { %>
+                                        <span class="text-success">+50 сом</span>
+                                    <% } else { %>
+                                        <span class="text-muted">-</span>
+                                    <% } %>
+                                </td>
+                            </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+            </div>
+        <% } else { %>
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> У вас пока нет рефералов. Поделитесь своей ссылкой с друзьями!
+            </div>
+        <% } %>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="/profile" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Назад в личный кабинет
+    </a>
+</div>
+
+<script>
+function copyReferralCode() {
+    const code = document.getElementById('referralCode');
+    code.select();
+    document.execCommand('copy');
+    
+    const btn = event.target.closest('button');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-check"></i> Скопировано!';
+    btn.classList.add('btn-success');
+    btn.classList.remove('btn-primary');
+    
+    setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-primary');
+    }, 2000);
+}
+
+function copyReferralLink() {
+    const link = document.getElementById('referralLink');
+    link.select();
+    document.execCommand('copy');
+    
+    const btn = event.target.closest('button');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-check"></i> Скопировано!';
+    btn.classList.add('btn-success');
+    btn.classList.remove('btn-primary');
+    
+    setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-primary');
+    }, 2000);
+}
+</script>
+
+<%- include('partials/footer') %>
+

@@ -1,0 +1,133 @@
+<%- include('partials/header', { title: 'Вход' }) %>
+
+<div class="row justify-content-center">
+    <div class="col-md-5 col-lg-4">
+        <div class="card shadow-lg animate-fade-in">
+            <div class="card-header bg-primary text-white text-center py-4" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%) !important;">
+                <div class="mb-3">
+                    <i class="bi bi-box-arrow-in-right" style="font-size: 3rem;"></i>
+                </div>
+                <h3 class="card-title mb-0 fw-bold">Вход в систему</h3>
+                <p class="mb-0 mt-2 opacity-75">Добро пожаловать обратно!</p>
+            </div>
+            <div class="card-body p-4">
+                <% if (typeof error !== 'undefined' && error) { %>
+                    <div class="alert alert-danger animate-slide-down" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <%= error %>
+                    </div>
+                <% } %>
+
+                <form method="POST" action="/auth/login" id="loginForm">
+                    <div class="mb-4">
+                        <label for="nickname" class="form-label fw-semibold">
+                            <i class="bi bi-person-fill text-primary me-2"></i>Никнейм
+                        </label>
+                        <input type="text" 
+                               class="form-control form-control-lg" 
+                               id="nickname" 
+                               name="nickname" 
+                               placeholder="Введите ваш никнейм"
+                               required
+                               autofocus>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="password" class="form-label fw-semibold">
+                            <i class="bi bi-lock-fill text-primary me-2"></i>Пароль
+                        </label>
+                        <div class="input-group">
+                            <input type="password" 
+                                   class="form-control form-control-lg" 
+                                   id="password" 
+                                   name="password" 
+                                   placeholder="Введите пароль"
+                                   required>
+                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                <i class="bi bi-eye" id="eyeIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-4 form-check">
+                        <input type="checkbox" class="form-check-input" id="rememberMe" name="rememberMe">
+                        <label class="form-check-label" for="rememberMe">
+                            Запомнить меня
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 btn-lg btn-hover-scale mb-3">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>Войти
+                    </button>
+                </form>
+
+                <hr class="my-4">
+
+                <div class="text-center">
+                    <p class="text-muted mb-2">Нет аккаунта?</p>
+                    <a href="/subscription" class="btn btn-outline-primary w-100 btn-hover-scale">
+                        <i class="bi bi-gift me-2"></i>Оформить подписку
+                    </a>
+                </div>
+
+                <div class="text-center mt-3">
+                    <a href="/" class="text-muted text-decoration-none">
+                        <i class="bi bi-arrow-left me-1"></i>Вернуться на главную
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Дополнительная информация -->
+        <div class="card shadow mt-4 animate-slide-up" data-delay="200">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-shield-check-fill text-success me-3" style="font-size: 2rem;"></i>
+                    <div>
+                        <h6 class="mb-0 fw-bold">Безопасный вход</h6>
+                        <small class="text-muted">Ваши данные защищены</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Переключение видимости пароля
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('password');
+    const eyeIcon = document.getElementById('eyeIcon');
+
+    if (togglePassword) {
+        togglePassword.addEventListener('click', function() {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            
+            if (type === 'password') {
+                eyeIcon.classList.remove('bi-eye-slash');
+                eyeIcon.classList.add('bi-eye');
+            } else {
+                eyeIcon.classList.remove('bi-eye');
+                eyeIcon.classList.add('bi-eye-slash');
+            }
+        });
+    }
+
+    // Анимация при загрузке формы
+    const form = document.getElementById('loginForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Вход...';
+                submitBtn.disabled = true;
+            }
+        });
+    }
+});
+</script>
+
+<%- include('partials/footer') %>
+

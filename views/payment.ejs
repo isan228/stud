@@ -1,0 +1,201 @@
+<%- include('partials/header', { title: 'Оплата подписки' }) %>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="alert alert-danger alert-dismissible fade show">
+                <%= error %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <% } %>
+
+        <div class="card shadow-lg mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-credit-card"></i> Оплата подписки</h4>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <h5>Выбранная подписка:</h5>
+                    <p class="mb-1"><strong>Тип:</strong> <%= subscription.typeText %></p>
+                    <p class="mb-1"><strong>Длительность:</strong> <%= subscription.durationText %></p>
+                    <p class="mb-0"><strong>Базовая цена:</strong> <span class="h4 text-primary"><%= subscription.basePrice %> сом</span></p>
+                </div>
+
+                <hr>
+
+                <form method="POST" action="/payment/purchase" id="paymentForm">
+                    <input type="hidden" name="subscriptionType" value="<%= subscription.type %>">
+                    <input type="hidden" name="subscriptionDuration" value="<%= subscription.duration %>">
+
+                    <!-- Реферальный код -->
+                    <div class="mb-4">
+                        <label for="referralCode" class="form-label fw-bold">
+                            <i class="bi bi-gift"></i> Реферальный код (необязательно):
+                        </label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="referralCode" name="referralCode" 
+                                   placeholder="Введите реферальный код" maxlength="50">
+                            <button type="button" class="btn btn-outline-primary" id="checkReferralBtn">
+                                <i class="bi bi-check-circle"></i> Проверить
+                            </button>
+                        </div>
+                        <div id="referralResult" class="mt-2"></div>
+                        <small class="text-muted">Если у вас есть реферальный код, введите его здесь. После покупки подписки вы и пригласивший получите по 50 бонусов.</small>
+                    </div>
+
+                    <!-- Бонусы -->
+                    <% if (user.bonusBalance && user.bonusBalance > 0) { %>
+                        <div class="mb-4">
+                            <label for="bonusAmount" class="form-label fw-bold">
+                                <i class="bi bi-wallet2"></i> Использовать бонусов (до <%= user.bonusBalance %>):
+                            </label>
+                            <input type="number" class="form-control" id="bonusAmount" name="bonusAmount" 
+                                   min="0" max="<%= user.bonusBalance %>" value="0" onchange="calculateTotal()">
+                            <small class="text-muted">1 бонус = 1 сом. Можно использовать частично или полностью.</small>
+                        </div>
+                    <% } else { %>
+                        <input type="hidden" name="bonusAmount" value="0">
+                    <% } %>
+
+                    <!-- Итоговая сумма -->
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">Итого к оплате:</h5>
+                            <div class="row">
+                                <div class="col-6">
+                                    <p class="mb-1">Базовая цена:</p>
+                                    <p class="mb-1" id="referralDiscountRow" style="display: none;">Скидка по реферальному коду:</p>
+                                    <p class="mb-1" id="bonusRow" style="display: none;">Бонусы:</p>
+                                    <p class="mb-1" id="referralBonusRow" style="display: none;" class="text-success">
+                                        <i class="bi bi-gift"></i> Бонусы после покупки:
+                                    </p>
+                                    <hr>
+                                    <p class="mb-0 fw-bold">К оплате:</p>
+                                </div>
+                                <div class="col-6 text-end">
+                                    <p class="mb-1"><%= subscription.basePrice %> сом</p>
+                                    <p class="mb-1 text-success" id="referralDiscountAmount" style="display: none;">-0 сом</p>
+                                    <p class="mb-1 text-info" id="bonusAmount" style="display: none;">-0 сом</p>
+                                    <p class="mb-1 text-success small" id="referralBonusInfo" style="display: none;">
+                                        <i class="bi bi-info-circle"></i> После оплаты: +50 бонусов
+                                    </p>
+                                    <hr>
+                                    <p class="mb-0 fw-bold h4 text-primary" id="totalAmount"><%= subscription.basePrice %> сом</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-check-circle"></i> Оплатить и оформить подписку
+                        </button>
+                        <a href="/subscription" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Вернуться к выбору подписки
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let basePrice = <%= subscription.basePrice %>;
+let referralCodeApplied = false;
+let referralDiscount = 0;
+
+function calculateTotal() {
+    const bonusAmount = parseInt(document.getElementById('bonusAmount')?.value || 0);
+    const bonusBalance = <%= user.bonusBalance || 0 %>;
+    const bonusToUse = Math.min(bonusAmount, bonusBalance, basePrice - referralDiscount);
+    
+    // Реферальный код дает скидку 50 сом
+    const total = Math.max(0, basePrice - referralDiscount - bonusToUse);
+
+    // Обновляем отображение
+    document.getElementById('totalAmount').textContent = total + ' сом';
+    
+    if (referralDiscount > 0) {
+        document.getElementById('referralDiscountRow').style.display = 'block';
+        document.getElementById('referralDiscountAmount').textContent = '-' + referralDiscount + ' сом';
+    } else {
+        document.getElementById('referralDiscountRow').style.display = 'none';
+    }
+    
+    if (bonusToUse > 0) {
+        document.getElementById('bonusRow').style.display = 'block';
+        document.getElementById('bonusAmount').textContent = '-' + bonusToUse + ' сом';
+    } else {
+        document.getElementById('bonusRow').style.display = 'none';
+    }
+
+    if (referralCodeApplied) {
+        document.getElementById('referralBonusRow').style.display = 'block';
+        document.getElementById('referralBonusInfo').style.display = 'block';
+    } else {
+        document.getElementById('referralBonusRow').style.display = 'none';
+        document.getElementById('referralBonusInfo').style.display = 'none';
+    }
+}
+
+document.getElementById('checkReferralBtn')?.addEventListener('click', async function() {
+    const referralCode = document.getElementById('referralCode').value.trim();
+    const resultDiv = document.getElementById('referralResult');
+    
+    if (!referralCode) {
+        resultDiv.innerHTML = '<div class="alert alert-warning">Введите реферальный код</div>';
+        return;
+    }
+
+    this.disabled = true;
+    this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Проверка...';
+
+    try {
+        const response = await fetch('/payment/check-referral', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                referralCode: referralCode
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            resultDiv.innerHTML = '<div class="alert alert-danger">' + data.error + '</div>';
+            referralCodeApplied = false;
+            referralDiscount = 0;
+            document.getElementById('referralCode').value = '';
+        } else if (data.success) {
+            referralCodeApplied = true;
+            referralDiscount = data.discount || 50; // Скидка 50 сом
+            resultDiv.innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle"></i> ' + data.message + '</div>';
+        }
+
+        calculateTotal();
+    } catch (error) {
+        resultDiv.innerHTML = '<div class="alert alert-danger">Ошибка при проверке реферального кода</div>';
+        referralCodeApplied = false;
+    } finally {
+        this.disabled = false;
+        this.innerHTML = '<i class="bi bi-check-circle"></i> Проверить';
+    }
+});
+
+// Применение реферального кода по Enter
+document.getElementById('referralCode')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('checkReferralBtn').click();
+    }
+});
+
+// Инициализация расчета
+calculateTotal();
+</script>
+
+<%- include('partials/footer') %>
+

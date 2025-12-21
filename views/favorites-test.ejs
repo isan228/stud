@@ -1,0 +1,220 @@
+<%- include('partials/header', { title: 'Тест из избранных вопросов' }) %>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h3 class="mb-0"><i class="bi bi-star-fill"></i> Тест из избранных вопросов</h3>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Всего избранных вопросов: <strong><%= questions.length %></strong></p>
+                
+                <% if (testGroups && testGroups.length > 0) { %>
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-info-circle"></i> Вопросы сгруппированы по тестам:</h6>
+                        <ul class="mb-0">
+                            <% testGroups.forEach(group => { %>
+                                <li><strong><%= group.test.title %></strong> - <%= group.questions.length %> вопросов</li>
+                            <% }); %>
+                        </ul>
+                    </div>
+                <% } %>
+
+                <form id="favoritesTestForm">
+                    <input type="hidden" id="testType" value="favorites">
+                    
+                    <% questions.forEach((question, index) => { 
+                        const test = question.Test;
+                    %>
+                        <div class="card mb-3">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-0">Вопрос #<%= index + 1 %></h5>
+                                    <% if (test) { %>
+                                        <small class="text-muted">
+                                            Из теста: <strong><%= test.title %></strong> | 
+                                            Предмет: <strong><%= test.subject %></strong>
+                                        </small>
+                                    <% } %>
+                                </div>
+                                <div>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFavorite(<%= question.id %>)">
+                                        <i class="bi bi-star"></i> Удалить из избранного
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <p class="fw-bold"><%= question.text %></p>
+                                
+                                <% if (question.Answers && question.Answers.length > 0) { %>
+                                    <div class="answers mt-3">
+                                        <% if (question.type === 'single') { %>
+                                            <% question.Answers.forEach(answer => { %>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" 
+                                                           name="question_<%= question.id %>" 
+                                                           id="answer_<%= answer.id %>" 
+                                                           value="<%= answer.id %>">
+                                                    <label class="form-check-label" for="answer_<%= answer.id %>">
+                                                        <%= answer.text %>
+                                                        <% if (answer.isCorrect) { %>
+                                                            <span class="badge bg-success ms-2">Правильный</span>
+                                                        <% } %>
+                                                    </label>
+                                                </div>
+                                            <% }); %>
+                                        <% } else if (question.type === 'multiple') { %>
+                                            <% question.Answers.forEach(answer => { %>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" 
+                                                           name="question_<%= question.id %>" 
+                                                           id="answer_<%= answer.id %>" 
+                                                           value="<%= answer.id %>">
+                                                    <label class="form-check-label" for="answer_<%= answer.id %>">
+                                                        <%= answer.text %>
+                                                        <% if (answer.isCorrect) { %>
+                                                            <span class="badge bg-success ms-2">Правильный</span>
+                                                        <% } %>
+                                                    </label>
+                                                </div>
+                                            <% }); %>
+                                        <% } else if (question.type === 'text') { %>
+                                            <textarea class="form-control" name="question_<%= question.id %>" rows="3"></textarea>
+                                        <% } %>
+                                    </div>
+                                <% } %>
+                            </div>
+                        </div>
+                    <% }); %>
+                    
+                    <div class="card">
+                        <div class="card-body">
+                            <button type="button" class="btn btn-primary btn-lg" onclick="checkAnswers()">
+                                <i class="bi bi-check-circle"></i> Проверить ответы
+                            </button>
+                            <button type="button" class="btn btn-secondary btn-lg ms-2" onclick="window.location.href='/tests/favorites'">
+                                <i class="bi bi-arrow-left"></i> Назад к избранным
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const questions = <%- JSON.stringify(questions) %>;
+
+function checkAnswers() {
+    const form = document.getElementById('favoritesTestForm');
+    const formData = new FormData(form);
+    const answers = {};
+    let correctCount = 0;
+    let totalAnswered = 0;
+    
+    // Собираем ответы
+    const questionInputs = form.querySelectorAll('[name^="question_"]');
+    const questionIds = new Set();
+    
+    questionInputs.forEach(input => {
+        const name = input.name;
+        const questionId = name.split('_')[1];
+        questionIds.add(questionId);
+    });
+    
+    questionIds.forEach(questionId => {
+        const inputs = form.querySelectorAll(`[name="question_${questionId}"]`);
+        const question = questions.find(q => q.id == questionId);
+        if (!question) return;
+        
+        let userAnswer = null;
+        if (question.type === 'single') {
+            const checked = Array.from(inputs).find(input => input.checked);
+            if (checked) {
+                userAnswer = parseInt(checked.value);
+                totalAnswered++;
+            }
+        } else if (question.type === 'multiple') {
+            const checked = Array.from(inputs).filter(input => input.checked).map(input => parseInt(input.value));
+            if (checked.length > 0) {
+                userAnswer = checked;
+                totalAnswered++;
+            }
+        } else if (question.type === 'text') {
+            const value = inputs[0]?.value;
+            if (value && value.trim()) {
+                userAnswer = value;
+                totalAnswered++;
+            }
+        }
+        
+        if (userAnswer !== null) {
+            // Проверяем правильность ответа
+            const correctAnswers = question.Answers.filter(a => a.isCorrect).map(a => a.id);
+            let isCorrect = false;
+            
+            if (question.type === 'single') {
+                isCorrect = correctAnswers.includes(userAnswer);
+            } else if (question.type === 'multiple') {
+                isCorrect = userAnswer.length === correctAnswers.length &&
+                    userAnswer.every(id => correctAnswers.includes(id)) &&
+                    correctAnswers.every(id => userAnswer.includes(id));
+            }
+            
+            if (isCorrect) correctCount++;
+            
+            answers[questionId] = userAnswer;
+        }
+    });
+    
+    // Показываем результаты
+    const result = `Правильных ответов: ${correctCount} из ${totalAnswered} (всего вопросов: ${questions.length})`;
+    alert(result);
+    
+    // Подсвечиваем правильные и неправильные ответы
+    questionIds.forEach(questionId => {
+        const question = questions.find(q => q.id == questionId);
+        if (!question) return;
+        
+        const inputs = form.querySelectorAll(`[name="question_${questionId}"]`);
+        inputs.forEach(input => {
+            const answerId = parseInt(input.value);
+            const answer = question.Answers.find(a => a.id === answerId);
+            
+            if (answer && answer.isCorrect) {
+                input.parentElement.classList.add('text-success');
+                input.parentElement.classList.add('fw-bold');
+            }
+        });
+    });
+}
+
+async function removeFavorite(questionId) {
+    if (!confirm('Удалить этот вопрос из избранного?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/favorite/remove', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ questionId })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Ошибка при удалении из избранного');
+        }
+    } catch (error) {
+        console.error('Ошибка:', error);
+        alert('Ошибка при удалении из избранного');
+    }
+}
+</script>
+
+<%- include('partials/footer') %>
+

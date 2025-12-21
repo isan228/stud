@@ -1,0 +1,92 @@
+<%- include('../partials/header', { title: 'Загрузка вопросов из PDF' }) %>
+
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card shadow-lg">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0"><i class="bi bi-file-earmark-pdf"></i> Загрузка вопросов из PDF</h4>
+                <small>Предмет: <%= subject.name %></small>
+            </div>
+            <div class="card-body">
+                <% if (typeof errors !== 'undefined' && errors.length > 0) { %>
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">
+                            <% errors.forEach(error => { %>
+                                <li><%= error.msg %></li>
+                            <% }); %>
+                        </ul>
+                    </div>
+                <% } %>
+
+                <div class="alert alert-info mb-4">
+                    <h5><i class="bi bi-info-circle"></i> Формат PDF файла:</h5>
+                    <p class="mb-2">Файл должен содержать вопросы в следующем формате:</p>
+                    <pre class="bg-light p-3 rounded">
+q: Текст вопроса
+a1: Вариант ответа 1
+a2: Вариант ответа 2
+a3: Вариант ответа 3
+a4: Вариант ответа 4
+s: 1
+
+q: Следующий вопрос
+a1: Вариант 1
+a2: Вариант 2
+a3: Вариант 3
+a4: Вариант 4
+s: 2
+                    </pre>
+                    <p class="mb-0">
+                        <strong>Где:</strong><br>
+                        <code>q:</code> - текст вопроса<br>
+                        <code>a1:, a2:, a3:, a4:</code> - варианты ответов (минимум 2, максимум 10)<br>
+                        <code>s:</code> - номер правильного ответа (1, 2, 3, 4 и т.д.)
+                    </p>
+                </div>
+
+                <form method="POST" action="/admin/subjects/<%= subject.id %>/upload-pdf" enctype="multipart/form-data" id="uploadForm">
+                    <div class="mb-4">
+                        <label for="pdfFile" class="form-label fw-bold">
+                            <i class="bi bi-file-earmark-pdf"></i> Выберите PDF файл *
+                        </label>
+                        <input type="file" class="form-control form-control-lg" id="pdfFile" name="pdfFile" accept=".pdf" required>
+                        <small class="text-muted">Максимальный размер: 10 МБ</small>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-upload"></i> Загрузить и обработать
+                        </button>
+                        <a href="/admin/subjects/<%= subject.id %>/questions" class="btn btn-outline-secondary btn-lg">
+                            <i class="bi bi-x-circle"></i> Отмена
+                        </a>
+                    </div>
+                </form>
+
+                <div id="uploadProgress" class="mt-4" style="display: none;">
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%">
+                            Обработка PDF файла...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('uploadForm').addEventListener('submit', function() {
+    document.getElementById('uploadProgress').style.display = 'block';
+    const submitBtn = this.querySelector('button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Обработка...';
+    }
+});
+</script>
+
+<%- include('../partials/footer') %>
+
+
+

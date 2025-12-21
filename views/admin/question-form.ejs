@@ -1,0 +1,227 @@
+<%- include('../partials/header', { title: 'Добавить вопрос' }) %>
+
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-question-circle"></i> 
+                    <%= question ? 'Редактировать вопрос' : 'Добавить вопрос' %>
+                </h4>
+                <small>Тест: <%= test.title %> | <%= test.Subject ? test.Subject.name : (test.subject || 'Предмет') %></small>
+            </div>
+            <div class="card-body">
+                <% if (typeof query !== 'undefined' && query.success) { %>
+                    <div class="alert alert-success alert-dismissible fade show">
+                        <%= query.success %>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <% } %>
+
+                <% if (typeof errors !== 'undefined' && errors.length > 0) { %>
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">
+                            <% errors.forEach(error => { %>
+                                <li><%= error.msg %></li>
+                            <% }); %>
+                        </ul>
+                    </div>
+                <% } %>
+
+                <form method="POST" action="<%= question ? `/admin/questions/${question.id}/edit` : `/admin/tests/${test.id}/questions` %>" id="questionForm">
+                    <div class="mb-3">
+                        <label for="text" class="form-label fw-bold">Текст вопроса *</label>
+                        <textarea class="form-control" id="text" name="text" rows="4" required><%= question ? (question.text || '') : '' %></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="type" class="form-label fw-bold">Тип вопроса *</label>
+                        <select class="form-select" id="type" name="type" required onchange="updateAnswerFields()" <%= question ? '' : 'disabled' %>>
+                            <option value="single" <%= (!question || question.type === 'single') ? 'selected' : '' %>>Один ответ</option>
+                            <option value="multiple" <%= question && question.type === 'multiple' ? 'selected' : '' %>>Множественный выбор</option>
+                            <option value="text" <%= question && question.type === 'text' ? 'selected' : '' %>>Текст (своими словами)</option>
+                            <option value="matching" <%= question && question.type === 'matching' ? 'selected' : '' %>>Сопоставление</option>
+                            <option value="order" <%= question && question.type === 'order' ? 'selected' : '' %>>Очередность</option>
+                            <option value="term" <%= question && question.type === 'term' ? 'selected' : '' %>>Термин</option>
+                            <option value="image" <%= question && question.type === 'image' ? 'selected' : '' %>>С изображением</option>
+                        </select>
+                        <% if (!question) { %>
+                            <input type="hidden" name="type" value="single">
+                            <small class="text-muted">По умолчанию: один ответ (1 правильный + 3 неправильных)</small>
+                        <% } %>
+                    </div>
+
+                    <div class="mb-3" id="imageUrlField" style="display: none;">
+                        <label for="imageUrl" class="form-label fw-bold">URL изображения</label>
+                        <input type="url" class="form-control" id="imageUrl" name="imageUrl" 
+                               value="<%= question ? (question.imageUrl || '') : '' %>">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Ответы *</label>
+                        <div id="answersContainer">
+                            <% if (question && question.Answers && question.Answers.length > 0) { %>
+                                <% question.Answers.forEach((answer, index) => { %>
+                                    <div class="answer-item mb-2 p-3 border rounded">
+                                        <div class="d-flex gap-2 align-items-center mb-2">
+                                            <input type="text" class="form-control" name="answers[<%= index %>][text]" 
+                                                   placeholder="Текст ответа" value="<%= answer.text %>" required>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" 
+                                                       name="answers[<%= index %>][isCorrect]" value="true" 
+                                                       id="answer<%= index %>" <%= answer.isCorrect ? 'checked' : '' %>>
+                                                <label class="form-check-label" for="answer<%= index %>">Правильный</label>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-danger" onclick="removeAnswer(this)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                <% }); %>
+                            <% } else { %>
+                                <!-- По умолчанию: 1 правильный + 3 неправильных -->
+                                <div class="answer-item mb-2 p-3 border rounded border-success">
+                                    <div class="d-flex gap-2 align-items-center mb-2">
+                                        <input type="text" class="form-control" name="answers[0][text]" placeholder="Правильный ответ" required>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="answers[0][isCorrect]" value="true" id="answer0" checked>
+                                            <label class="form-check-label text-success fw-bold" for="answer0">Правильный</label>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="removeAnswer(this)" style="display: none;">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="answer-item mb-2 p-3 border rounded">
+                                    <div class="d-flex gap-2 align-items-center mb-2">
+                                        <input type="text" class="form-control" name="answers[1][text]" placeholder="Неправильный ответ 1" required>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="answers[1][isCorrect]" value="true" id="answer1">
+                                            <label class="form-check-label" for="answer1">Правильный</label>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="removeAnswer(this)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="answer-item mb-2 p-3 border rounded">
+                                    <div class="d-flex gap-2 align-items-center mb-2">
+                                        <input type="text" class="form-control" name="answers[2][text]" placeholder="Неправильный ответ 2" required>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="answers[2][isCorrect]" value="true" id="answer2">
+                                            <label class="form-check-label" for="answer2">Правильный</label>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="removeAnswer(this)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="answer-item mb-2 p-3 border rounded">
+                                    <div class="d-flex gap-2 align-items-center mb-2">
+                                        <input type="text" class="form-control" name="answers[3][text]" placeholder="Неправильный ответ 3" required>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="answers[3][isCorrect]" value="true" id="answer3">
+                                            <label class="form-check-label" for="answer3">Правильный</label>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="removeAnswer(this)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <script>
+                                    answerCount = 4;
+                                </script>
+                            <% } %>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary" onclick="addAnswer()">
+                            <i class="bi bi-plus"></i> Добавить ответ
+                        </button>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-check-circle"></i> <%= question ? 'Сохранить изменения' : 'Сохранить вопрос' %>
+                        </button>
+                        <a href="/admin/subjects/<%= test.Subject ? test.Subject.id : (test.subjectId || '') %>/questions" class="btn btn-outline-secondary btn-lg">
+                            <i class="bi bi-x-circle"></i> Отмена
+                        </a>
+                        <% if (!question) { %>
+                            <button type="button" class="btn btn-outline-info btn-lg" onclick="addAnother()">
+                                <i class="bi bi-plus-circle"></i> Сохранить и добавить еще
+                            </button>
+                        <% } %>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let answerCount = <%= (question && question.Answers && question.Answers.length > 0) ? question.Answers.length : 4 %>;
+
+function addAnswer() {
+    const container = document.getElementById('answersContainer');
+    const newAnswer = document.createElement('div');
+    newAnswer.className = 'answer-item mb-2 p-3 border rounded';
+    newAnswer.innerHTML = `
+        <div class="d-flex gap-2 align-items-center mb-2">
+            <input type="text" class="form-control" name="answers[${answerCount}][text]" placeholder="Текст ответа" required>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="answers[${answerCount}][isCorrect]" value="true" id="answer${answerCount}">
+                <label class="form-check-label" for="answer${answerCount}">Правильный</label>
+            </div>
+            <button type="button" class="btn btn-sm btn-danger" onclick="removeAnswer(this)">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    `;
+    container.appendChild(newAnswer);
+    answerCount++;
+    updateRemoveButtons();
+}
+
+function removeAnswer(btn) {
+    btn.closest('.answer-item').remove();
+    updateRemoveButtons();
+}
+
+function updateRemoveButtons() {
+    const items = document.querySelectorAll('.answer-item');
+    items.forEach(item => {
+        const removeBtn = item.querySelector('button');
+        if (items.length > 1) {
+            removeBtn.style.display = 'block';
+        } else {
+            removeBtn.style.display = 'none';
+        }
+    });
+}
+
+function updateAnswerFields() {
+    const type = document.getElementById('type').value;
+    const imageField = document.getElementById('imageUrlField');
+    if (type === 'image') {
+        imageField.style.display = 'block';
+    } else {
+        imageField.style.display = 'none';
+    }
+}
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    updateAnswerFields();
+    updateRemoveButtons();
+});
+
+function addAnother() {
+    document.getElementById('questionForm').action = document.getElementById('questionForm').action + '?addAnother=true';
+    document.getElementById('questionForm').submit();
+}
+
+updateRemoveButtons();
+</script>
+
+<%- include('../partials/footer') %>
+
+
