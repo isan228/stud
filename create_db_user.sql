@@ -20,9 +20,17 @@ GRANT ALL PRIVILEGES ON DATABASE studd TO studd_user;
 \c studd
 
 -- Назначение прав на схему public
+GRANT USAGE ON SCHEMA public TO studd_user;
+GRANT CREATE ON SCHEMA public TO studd_user;
 GRANT ALL ON SCHEMA public TO studd_user;
+
+-- Делаем пользователя владельцем схемы (для полного доступа)
+ALTER SCHEMA public OWNER TO studd_user;
+
+-- Настройка прав по умолчанию для будущих объектов
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO studd_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO studd_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO studd_user;
 
 -- Вывод информации о созданном пользователе
 SELECT 'Пользователь studd_user успешно создан!' AS status;

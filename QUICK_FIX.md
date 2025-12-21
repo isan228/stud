@@ -26,9 +26,18 @@ GRANT ALL PRIVILEGES ON DATABASE studd TO studd_user;
 sudo -u postgres psql -d studd
 
 # 4. В консоли PostgreSQL выполните:
+-- Даем права на использование и создание объектов в схеме public
+GRANT USAGE ON SCHEMA public TO studd_user;
+GRANT CREATE ON SCHEMA public TO studd_user;
 GRANT ALL ON SCHEMA public TO studd_user;
+
+-- Делаем пользователя владельцем схемы (для полного доступа)
+ALTER SCHEMA public OWNER TO studd_user;
+
+-- Настройка прав по умолчанию для будущих объектов
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO studd_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO studd_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO studd_user;
 
 # Выход
 \q
@@ -52,9 +61,33 @@ DB_HOST=localhost
 DB_PORT=5432
 ```
 
+## Исправление прав на схему (если получили ошибку "permission denied for schema public")
+
+Если при синхронизации БД вы получили ошибку `permission denied for schema public`, выполните:
+
+```bash
+# Вариант 1: Использование SQL скрипта
+sudo -u postgres psql -d studd -f fix_schema_permissions.sql
+
+# Вариант 2: Вручную
+sudo -u postgres psql -d studd
+```
+
+Затем в консоли PostgreSQL:
+```sql
+GRANT USAGE ON SCHEMA public TO studd_user;
+GRANT CREATE ON SCHEMA public TO studd_user;
+GRANT ALL ON SCHEMA public TO studd_user;
+ALTER SCHEMA public OWNER TO studd_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO studd_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO studd_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO studd_user;
+\q
+```
+
 ## Синхронизация базы данных
 
-После создания пользователя выполните:
+После создания пользователя и назначения прав выполните:
 
 ```bash
 npm run sync-db
