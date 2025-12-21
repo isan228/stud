@@ -37,17 +37,66 @@ sudo systemctl enable postgresql
 ```
 
 ### 1.4 Настройка PostgreSQL
+
+**Вариант 1: Автоматический скрипт (рекомендуется)**
+```bash
+# Переход в директорию проекта
+cd ~/stud
+
+# Сделать скрипт исполняемым (если еще не сделано)
+chmod +x fix_db_auth.sh
+
+# Запуск скрипта для создания пользователя (потребуется ввести пароль)
+sudo bash fix_db_auth.sh
+
+# После выполнения скрипта обновите файл .env с новыми учетными данными
+```
+
+**Вариант 2: Использование SQL скрипта**
+```bash
+# Отредактируйте create_db_user.sql и замените 'ваш_надежный_пароль' на свой пароль
+nano create_db_user.sql
+
+# Выполнение SQL скрипта
+sudo -u postgres psql -f create_db_user.sql
+```
+
+**Вариант 3: Ручная настройка**
 ```bash
 # Переключение на пользователя postgres
 sudo -u postgres psql
 
 # В консоли PostgreSQL выполните:
 CREATE DATABASE studd;
-CREATE USER postgres WITH PASSWORD 'ваш_надежный_пароль';
-ALTER ROLE postgres SET client_encoding TO 'utf8';
-ALTER ROLE postgres SET default_transaction_isolation TO 'read committed';
-ALTER ROLE postgres SET timezone TO 'UTC';
-GRANT ALL PRIVILEGES ON DATABASE studd TO postgres;
+
+# Создание нового пользователя для приложения (замените 'ваш_надежный_пароль' на свой пароль)
+CREATE USER studd_user WITH PASSWORD 'ваш_надежный_пароль';
+
+# Настройка параметров пользователя
+ALTER ROLE studd_user SET client_encoding TO 'utf8';
+ALTER ROLE studd_user SET default_transaction_isolation TO 'read committed';
+ALTER ROLE studd_user SET timezone TO 'UTC';
+
+# Назначение прав на базу данных
+GRANT ALL PRIVILEGES ON DATABASE studd TO studd_user;
+
+# Выход из консоли PostgreSQL
+\q
+
+# Подключение к базе данных studd для назначения прав на схему
+sudo -u postgres psql -d studd
+
+# В консоли PostgreSQL выполните:
+GRANT ALL ON SCHEMA public TO studd_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO studd_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO studd_user;
+\q
+```
+
+**Альтернативный вариант:** Если вы хотите использовать существующего пользователя `postgres`, измените его пароль:
+```bash
+sudo -u postgres psql
+ALTER USER postgres WITH PASSWORD 'ваш_новый_пароль';
 \q
 ```
 
@@ -88,7 +137,7 @@ nano .env
 ```env
 # Настройки базы данных PostgreSQL
 DB_NAME=studd
-DB_USER=postgres
+DB_USER=studd_user
 DB_PASSWORD=ваш_надежный_пароль
 DB_HOST=localhost
 DB_PORT=5432
@@ -250,14 +299,82 @@ pm2 restart stud-platform
 ## Резервное копирование базы данных
 
 ```bash
-# Создание бэкапа
-pg_dump -U postgres studd > backup_$(date +%Y%m%d_%H%M%S).sql
+# Создание бэкапа (используйте вашего пользователя БД)
+pg_dump -U studd_user studd > backup_$(date +%Y%m%d_%H%M%S).sql
+
+# Или с использованием postgres пользователя (если нужны права суперпользователя)
+sudo -u postgres pg_dump studd > backup_$(date +%Y%m%d_%H%M%S).sql
 
 # Восстановление из бэкапа
-psql -U postgres studd < backup_20250101_120000.sql
+psql -U studd_user studd < backup_20250101_120000.sql
 ```
 
 ## Решение проблем
+
+### Ошибка аутентификации PostgreSQL (password authentication failed)
+
+Если вы получаете ошибку `password authentication failed for user`, выполните следующие шаги:
+
+**Вариант 1: Автоматический скрипт (самый простой)**
+```bash
+cd ~/stud
+chmod +x fix_db_auth.sh
+sudo bash fix_db_auth.sh
+# Следуйте инструкциям скрипта и обновите .env файл
+```
+
+**Вариант 2: Использование SQL скрипта**
+```bash
+# Отредактируйте create_db_user.sql и замените пароль
+nano create_db_user.sql
+sudo -u postgres psql -f create_db_user.sql
+# Обновите файл .env с новыми учетными данными
+```
+
+**Вариант 3: Ручное создание пользователя**
+```bash
+# Подключение к PostgreSQL от имени суперпользователя
+sudo -u postgres psql
+
+# В консоли PostgreSQL:
+CREATE USER studd_user WITH PASSWORD 'ваш_надежный_пароль';
+ALTER ROLE studd_user SET client_encoding TO 'utf8';
+ALTER ROLE studd_user SET default_transaction_isolation TO 'read committed';
+ALTER ROLE studd_user SET timezone TO 'UTC';
+GRANT ALL PRIVILEGES ON DATABASE studd TO studd_user;
+\q
+
+# Назначение прав на схему
+sudo -u postgres psql -d studd
+GRANT ALL ON SCHEMA public TO studd_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO studd_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO studd_user;
+\q
+
+# Обновите файл .env с новыми учетными данными:
+# DB_USER=studd_user
+# DB_PASSWORD=ваш_надежный_пароль
+```
+
+**Вариант 4: Изменение пароля существующего пользователя**
+```bash
+sudo -u postgres psql
+ALTER USER postgres WITH PASSWORD 'ваш_новый_пароль';
+\q
+
+# Обновите файл .env:
+# DB_USER=postgres
+# DB_PASSWORD=ваш_новый_пароль
+```
+
+**Проверка подключения:**
+```bash
+# Проверка подключения с новым пользователем
+psql -U studd_user -d studd -c "SELECT 1;"
+
+# Или с postgres пользователем
+psql -U postgres -d studd -c "SELECT 1;"
+```
 
 ### Приложение не запускается
 ```bash
@@ -265,7 +382,7 @@ psql -U postgres studd < backup_20250101_120000.sql
 pm2 logs stud-platform --lines 100
 
 # Проверка подключения к БД
-psql -U postgres -d studd -c "SELECT 1;"
+psql -U studd_user -d studd -c "SELECT 1;"
 ```
 
 ### Проблемы с правами доступа
@@ -301,4 +418,5 @@ sudo tail -f /var/log/nginx/error.log
 - PM2: `pm2 logs stud-platform`
 - Nginx: `sudo tail -f /var/log/nginx/error.log`
 - PostgreSQL: `sudo tail -f /var/log/postgresql/postgresql-*.log`
+
 
