@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const bodyParser = require('body-parser');
@@ -49,11 +50,11 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Настройка сессий
 app.use(session({
-  secret: 'stud-platform-secret-key-2025',
+  secret: process.env.SESSION_SECRET || 'stud-platform-secret-key-2025',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false,
+    secure: process.env.SECURE_COOKIES === 'true' || false,
     maxAge: 24 * 60 * 60 * 1000 // 24 часа
   }
 }));
