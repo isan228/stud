@@ -201,8 +201,93 @@ pm2 logs stud-platform
 
 ## Шаг 7: Настройка Nginx как reverse proxy
 
+### Автоматическая настройка (рекомендуется)
+
 ```bash
-# Создание конфигурации Nginx
+# Переход в директорию проекта
+cd ~/stud
+
+# Сделать скрипт исполняемым
+chmod +x setup_nginx.sh
+
+# Запуск скрипта (потребуется ввести домен или IP)
+sudo bash setup_nginx.sh
+```
+
+Скрипт автоматически:
+- Проверит и установит Nginx, если необходимо
+- Создаст необходимые директории
+- Настроит конфигурацию
+- Проверит и перезагрузит Nginx
+
+### Ручная настройка
+
+**Если вы получили ошибку "Directory '/etc/nginx/sites-available' does not exist":**
+
+Выполните эти команды для создания директорий:
+
+```bash
+# Создание директорий
+sudo mkdir -p /etc/nginx/sites-available
+sudo mkdir -p /etc/nginx/sites-enabled
+
+# Добавление include директивы в nginx.conf (если её нет)
+if ! grep -q "include /etc/nginx/sites-enabled/\*;" /etc/nginx/nginx.conf; then
+    sudo cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.backup
+    sudo sed -i '/http {/a\    include /etc/nginx/sites-enabled/*;' /etc/nginx/nginx.conf
+fi
+```
+
+Затем продолжайте с настройкой конфигурации ниже.
+
+### Проверка установки Nginx
+
+```bash
+# Проверка, установлен ли Nginx
+nginx -v
+
+# Если не установлен, установите:
+sudo apt install -y nginx
+sudo systemctl start nginx
+sudo systemctl enable nginx
+```
+
+### Вариант 1: Использование sites-available/sites-enabled (Ubuntu/Debian)
+
+**Важно:** Сначала проверьте установку Nginx и создайте директории:
+
+```bash
+# 1. Проверка установки Nginx
+if ! command -v nginx &> /dev/null; then
+    echo "Nginx не установлен. Устанавливаю..."
+    sudo apt update
+    sudo apt install -y nginx
+    sudo systemctl start nginx
+    sudo systemctl enable nginx
+else
+    echo "Nginx установлен: $(nginx -v 2>&1)"
+fi
+
+# 2. Создание директорий, если их нет
+if [ ! -d "/etc/nginx/sites-available" ]; then
+    echo "Создание директорий sites-available и sites-enabled..."
+    sudo mkdir -p /etc/nginx/sites-available
+    sudo mkdir -p /etc/nginx/sites-enabled
+    
+    # Добавление директивы include в nginx.conf, если её нет
+    if ! grep -q "include /etc/nginx/sites-enabled/\*;" /etc/nginx/nginx.conf; then
+        echo "Добавление include директивы в nginx.conf..."
+        # Создание резервной копии
+        sudo cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.backup.$(date +%Y%m%d_%H%M%S)
+        sudo sed -i '/http {/a\    include /etc/nginx/sites-enabled/*;' /etc/nginx/nginx.conf
+        echo "Директива include добавлена в nginx.conf"
+    fi
+    echo "Директории созданы успешно!"
+else
+    echo "Директории sites-available и sites-enabled уже существуют"
+fi
+
+# 3. Создание конфигурации Nginx
 sudo nano /etc/nginx/sites-available/stud-platform
 ```
 
@@ -234,6 +319,70 @@ server {
 # Создание символической ссылки
 sudo ln -s /etc/nginx/sites-available/stud-platform /etc/nginx/sites-enabled/
 
+# Проверка конфигурации
+sudo nginx -t
+
+# Перезагрузка Nginx
+sudo systemctl reload nginx
+```
+
+### Вариант 2: Использование conf.d (альтернативный метод)
+
+Если директории `sites-available` не существует или вы предпочитаете другой подход:
+
+```bash
+# Создание конфигурации в conf.d
+sudo nano /etc/nginx/conf.d/stud-platform.conf
+```
+
+Добавьте ту же конфигурацию, что и выше.
+
+Затем:
+```bash
+# Проверка конфигурации
+sudo nginx -t
+
+# Перезагрузка Nginx
+sudo systemctl reload nginx
+```
+
+### Вариант 3: Прямое редактирование nginx.conf
+
+Если оба предыдущих варианта не работают:
+
+```bash
+# Резервная копия
+sudo cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.backup
+
+# Редактирование конфигурации
+sudo nano /etc/nginx/nginx.conf
+```
+
+Найдите блок `http {` и добавьте внутри него (перед закрывающей скобкой):
+
+```nginx
+server {
+    listen 80;
+    server_name ваш_домен.com www.ваш_домен.com;
+
+    location / {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    client_max_body_size 50M;
+}
+```
+
+Затем:
+```bash
 # Проверка конфигурации
 sudo nginx -t
 
@@ -410,6 +559,30 @@ ls -la ~/stud
 chmod -R 755 ~/stud
 ```
 
+### Ошибка: Directory '/etc/nginx/sites-available' does not exist
+
+Если вы получили эту ошибку, выполните:
+
+```bash
+# Проверка установки Nginx
+nginx -v
+
+# Если Nginx не установлен
+sudo apt install -y nginx
+
+# Создание директорий, если их нет
+sudo mkdir -p /etc/nginx/sites-available
+sudo mkdir -p /etc/nginx/sites-enabled
+
+# Проверка наличия include директивы в nginx.conf
+grep "include /etc/nginx/sites-enabled" /etc/nginx/nginx.conf
+
+# Если директивы нет, добавьте её в блок http { в файле /etc/nginx/nginx.conf:
+# include /etc/nginx/sites-enabled/*;
+```
+
+Или используйте альтернативный метод (см. Шаг 7, Вариант 2 или 3).
+
 ### Nginx не проксирует запросы
 ```bash
 # Проверка конфигурации
@@ -420,6 +593,9 @@ sudo systemctl status nginx
 
 # Просмотр логов
 sudo tail -f /var/log/nginx/error.log
+
+# Проверка, что конфигурация загружена
+sudo nginx -T | grep -A 10 "stud-platform"
 ```
 
 ## Безопасность
