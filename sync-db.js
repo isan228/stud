@@ -31,7 +31,15 @@ async function syncDatabase() {
       
       if (paymentIdCheck[0].length === 0) {
         await sequelize.query(`ALTER TABLE "Subscriptions" ADD COLUMN "paymentId" VARCHAR(255);`);
+        await sequelize.query(`COMMENT ON COLUMN "Subscriptions"."paymentId" IS 'ID платежа в Finik';`);
         console.log('Добавлено поле paymentId');
+      } else {
+        // Добавляем комментарий, если его нет
+        try {
+          await sequelize.query(`COMMENT ON COLUMN "Subscriptions"."paymentId" IS 'ID платежа в Finik';`);
+        } catch (error) {
+          // Игнорируем ошибку комментария
+        }
       }
       
       // Проверяем и добавляем transactionId
@@ -43,7 +51,15 @@ async function syncDatabase() {
       
       if (transactionIdCheck[0].length === 0) {
         await sequelize.query(`ALTER TABLE "Subscriptions" ADD COLUMN "transactionId" VARCHAR(255);`);
+        await sequelize.query(`COMMENT ON COLUMN "Subscriptions"."transactionId" IS 'ID транзакции в Finik';`);
         console.log('Добавлено поле transactionId');
+      } else {
+        // Добавляем комментарий, если его нет
+        try {
+          await sequelize.query(`COMMENT ON COLUMN "Subscriptions"."transactionId" IS 'ID транзакции в Finik';`);
+        } catch (error) {
+          // Игнорируем ошибку комментария
+        }
       }
       
       // Создаем ENUM тип для paymentStatus, если его нет
@@ -56,16 +72,19 @@ async function syncDatabase() {
         END $$;
       `);
       
-      // Проверяем и добавляем paymentStatus
+      // Проверяем paymentStatus - если существует, удаляем перед синхронизацией
+      // Sequelize создаст её заново с правильным типом при синхронизации
       const paymentStatusCheck = await sequelize.query(`
         SELECT column_name 
         FROM information_schema.columns 
         WHERE table_name = 'Subscriptions' AND column_name = 'paymentStatus';
       `);
       
-      if (paymentStatusCheck[0].length === 0) {
-        await sequelize.query(`ALTER TABLE "Subscriptions" ADD COLUMN "paymentStatus" "enum_Subscriptions_paymentStatus" DEFAULT 'pending';`);
-        console.log('Добавлено поле paymentStatus');
+      if (paymentStatusCheck[0].length > 0) {
+        // Колонка существует - удаляем её, чтобы Sequelize создал заново правильно
+        console.log('Удаляем существующую колонку paymentStatus для правильного пересоздания...');
+        await sequelize.query(`ALTER TABLE "Subscriptions" DROP COLUMN IF EXISTS "paymentStatus";`);
+        console.log('Колонка paymentStatus будет создана заново при синхронизации.');
       }
       
       console.log('Поля Finik проверены/добавлены в таблицу Subscriptions.');

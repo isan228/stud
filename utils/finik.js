@@ -84,16 +84,73 @@ function createSignature(requestData) {
 
   // Обработка приватного ключа (замена \n на реальные переносы строк)
   privateKey = privateKey.replace(/\\n/g, '\n');
+  
+  // Нормализуем переносы строк
+  privateKey = privateKey.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  
+  // Убираем лишние пробелы в начале и конце
+  privateKey = privateKey.trim();
+  
+  // Проверяем, что ключ содержит заголовки PEM
+  if (!privateKey.includes('-----BEGIN')) {
+    throw new Error('Приватный ключ должен быть в формате PEM с заголовками -----BEGIN PRIVATE KEY----- или -----BEGIN RSA PRIVATE KEY-----');
+  }
+  
+  // Проверяем, что ключ содержит закрывающий заголовок
+  if (!privateKey.includes('-----END')) {
+    throw new Error('Приватный ключ должен содержать закрывающий заголовок -----END PRIVATE KEY----- или -----END RSA PRIVATE KEY-----');
+  }
 
   // Построение канонической строки
   const canonicalString = buildCanonicalStringForSigning(requestData);
   
-  // Создание подписи RSA-SHA256
-  const signer = crypto.createSign('RSA-SHA256');
-  signer.update(canonicalString, 'utf8');
-  const signature = signer.sign(privateKey, 'base64');
-  
-  return signature;
+  try {
+    // Создание подписи RSA-SHA256
+    const signer = crypto.createSign('RSA-SHA256');
+    signer.update(canonicalString, 'utf8');
+    
+    // Пытаемся создать ключ объект, пробуя разные форматы
+    let keyObject;
+    let signature;
+    
+    try {
+      // Сначала пробуем использовать ключ напрямую (старый способ)
+      signature = signer.sign(privateKey, 'base64');
+      return signature;
+    } catch (error1) {
+      // Если не получилось, пробуем создать ключ объект
+      try {
+        // Пробуем как PKCS#8 (-----BEGIN PRIVATE KEY-----)
+        keyObject = crypto.createPrivateKey({
+          key: privateKey,
+          format: 'pem'
+        });
+        signature = signer.sign(keyObject, 'base64');
+        return signature;
+      } catch (error2) {
+        // Если не получилось, пробуем как PKCS#1 (-----BEGIN RSA PRIVATE KEY-----)
+        try {
+          keyObject = crypto.createPrivateKey({
+            key: privateKey,
+            format: 'pem',
+            type: 'pkcs1'
+          });
+          signature = signer.sign(keyObject, 'base64');
+          return signature;
+        } catch (error3) {
+          // Если все варианты не сработали, выбрасываем ошибку
+          console.error('Ошибка при создании подписи:', error3.message);
+          console.error('Проверьте формат ключа. Должен быть PEM формат:');
+          console.error('  - PKCS#8: -----BEGIN PRIVATE KEY----- ... -----END PRIVATE KEY-----');
+          console.error('  - PKCS#1: -----BEGIN RSA PRIVATE KEY----- ... -----END RSA PRIVATE KEY-----');
+          throw new Error(`Ошибка создания подписи: ${error3.message}`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Ошибка при создании подписи:', error.message);
+    throw error;
+  }
 }
 
 // Верификация подписи от Finik
