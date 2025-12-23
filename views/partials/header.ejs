@@ -17,69 +17,7 @@
     (function() {
         'use strict';
         
-        // Защита от просмотра исходного кода через view-source:
-        if (window.location.protocol === 'view-source:' || window.location.href.indexOf('view-source:') !== -1) {
-            window.location.href = '/auth/login';
-        }
-        
-        // Блокировка контекстного меню
-        document.addEventListener('contextmenu', function(e) { 
-            e.preventDefault(); 
-            e.stopPropagation(); 
-            e.stopImmediatePropagation();
-            return false; 
-        }, true);
-        
-        // Блокировка выделения
-        document.addEventListener('selectstart', function(e) { 
-            e.preventDefault(); 
-            return false; 
-        }, true);
-        
-        // Блокировка перетаскивания
-        document.addEventListener('dragstart', function(e) { 
-            e.preventDefault(); 
-            return false; 
-        }, true);
-        
-        // Блокировка горячих клавиш
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'PrintScreen' || e.key === 'F12' || 
-                (e.metaKey && e.shiftKey && ['3','4','5'].includes(e.key)) ||
-                (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(e.key)) ||
-                (e.ctrlKey && ['U','S'].includes(e.key))) {
-                e.preventDefault(); 
-                e.stopPropagation(); 
-                e.stopImmediatePropagation();
-                // Отправка нарушения на сервер
-                try {
-                    fetch('/api/security/violation', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({violationType: 'keyboard_shortcut', key: e.key})
-                    });
-                } catch(err) {}
-                return false;
-            }
-        }, true);
-        
-        // Блокировка копирования
-        document.addEventListener('copy', function(e) { 
-            e.preventDefault(); 
-            return false; 
-        }, true);
-        
-        document.addEventListener('cut', function(e) { 
-            e.preventDefault(); 
-            return false; 
-        }, true);
-        
-        // Защита от открытия через view-source: в адресной строке
-        setInterval(function() {
-            if (window.location.href.indexOf('view-source:') !== -1) {
-                window.location.href = '/auth/login';
-            }
-        }, 100);
+    // Все блокировки копирования удалены
     })();
     
     // Управление размером шрифта
@@ -178,9 +116,7 @@
         color: #ffffff !important;
     }
     
-    * { -webkit-user-select: none !important; -moz-user-select: none !important; user-select: none !important; }
-    input, textarea { -webkit-user-select: text !important; -moz-user-select: text !important; user-select: text !important; }
-    img { -webkit-user-drag: none !important; pointer-events: none !important; }
+    /* Блокировки копирования удалены - пользователи могут свободно копировать текст */
     
     /* Навбар должен оставаться цветным - максимальный приоритет */
     nav.navbar, 
