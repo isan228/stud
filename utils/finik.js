@@ -1,4 +1,3 @@
-const { Signer, RequestData } = require('@mancho.devs/authorizer');
 const crypto = require('crypto');
 require('dotenv').config();
 
@@ -16,23 +15,96 @@ function getPublicKey() {
     : process.env.FINIK_PUBLIC_KEY_PROD;
 }
 
+// Построение канонической строки для создания подписи
+function buildCanonicalStringForSigning(requestData) {
+  const { httpMethod, path, headers, queryStringParameters, body } = requestData;
+  
+  // 1. HTTP метод в нижнем регистре
+  const method = httpMethod.toLowerCase();
+  
+  // 2. Путь (абсолютный, без query параметров)
+  const uriPath = path;
+  
+  // 3. Заголовки (Host + все x-api-*), отсортированные по имени
+  const headerMap = {};
+  if (headers.Host) {
+    headerMap.host = headers.Host;
+  }
+  
+  // Добавляем все заголовки, начинающиеся с x-api-
+  Object.keys(headers).forEach(key => {
+    if (key.toLowerCase().startsWith('x-api-')) {
+      headerMap[key.toLowerCase()] = headers[key];
+    }
+  });
+  
+  // Сортируем и формируем строку заголовков
+  const sortedHeaderKeys = Object.keys(headerMap).sort();
+  const headerString = sortedHeaderKeys
+    .map(key => `${key}:${headerMap[key]}`)
+    .join('&');
+  
+  // 4. Query параметры (если есть)
+  let queryString = '';
+  if (queryStringParameters && Object.keys(queryStringParameters).length > 0) {
+    const sortedQueryKeys = Object.keys(queryStringParameters).sort();
+    queryString = sortedQueryKeys
+      .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(queryStringParameters[key] || '')}`)
+      .join('&');
+  }
+  
+  // 5. Тело запроса (JSON, отсортированный по ключам)
+  let bodyString = '';
+  if (body && Object.keys(body).length > 0) {
+    bodyString = JSON.stringify(sortObjectKeys(body));
+  }
+  
+  // Собираем каноническую строку
+  const parts = [
+    method,
+    uriPath,
+    headerString,
+    queryString,
+    bodyString
+  ];
+  
+  // Если нет query параметров, не добавляем пустую строку
+  return parts.filter((part, index) => {
+    if (index === 3 && !queryString) return false; // Пропускаем пустую query строку
+    return true;
+  }).join('\n');
+}
+
 // Создание подписи для запроса к Finik
-async function createSignature(requestData) {
-  const privateKey = process.env.FINIK_PRIVATE_KEY_PEM;
+function createSignature(requestData) {
+  let privateKey = process.env.FINIK_PRIVATE_KEY_PEM;
   if (!privateKey) {
     throw new Error('FINIK_PRIVATE_KEY_PEM не настроен в .env');
   }
 
-  const signer = new Signer(requestData);
-  return await signer.sign(privateKey);
+  // Обработка приватного ключа (замена \n на реальные переносы строк)
+  privateKey = privateKey.replace(/\\n/g, '\n');
+
+  // Построение канонической строки
+  const canonicalString = buildCanonicalStringForSigning(requestData);
+  
+  // Создание подписи RSA-SHA256
+  const signer = crypto.createSign('RSA-SHA256');
+  signer.update(canonicalString, 'utf8');
+  const signature = signer.sign(privateKey, 'base64');
+  
+  return signature;
 }
 
 // Верификация подписи от Finik
 function verifySignature(canonicalString, signatureBase64) {
-  const publicKey = getPublicKey();
+  let publicKey = getPublicKey();
   if (!publicKey) {
     throw new Error('Публичный ключ Finik не настроен в .env');
   }
+
+  // Обработка публичного ключа (замена \n на реальные переносы строк)
+  publicKey = publicKey.replace(/\\n/g, '\n');
 
   try {
     const verifier = crypto.createVerify('RSA-SHA256');
@@ -139,7 +211,7 @@ async function createPayment(paymentData) {
     body: paymentData
   };
   
-  const signature = await createSignature(requestData);
+  const signature = createSignature(requestData);
   
   // Используем встроенный fetch (Node 18+) или node-fetch
   let fetch;
