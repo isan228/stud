@@ -224,39 +224,63 @@ router.post('/purchase', [
     }
 
     // Если нужна оплата, создаем платеж через Finik
-    // Сохраняем данные в сессии для использования после оплаты
-    req.session.pendingPayment = {
-      subscriptionType,
-      subscriptionDuration,
-      bonusAmount: bonusToUse,
-      referralDiscount,
-      basePrice,
-      finalPrice
-    };
-
-    // Создаем платеж через Finik API
-    const fetch = require('node-fetch');
-    const finikResponse = await fetch(`${req.protocol}://${req.get('host')}/payment/finik/create`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cookie': req.headers.cookie
-      },
-      body: JSON.stringify({
-        subscriptionType,
-        subscriptionDuration,
-        bonusAmount: bonusToUse,
-        referralCode
-      })
+    // Используем прямой вызов функции вместо HTTP запроса
+    const { createPayment } = require('../utils/finik');
+    const crypto = require('crypto');
+    
+    // Генерируем уникальный ID платежа
+    const paymentId = crypto.randomUUID ? crypto.randomUUID() : require('uuid').v4();
+    
+    // Создаем временную подписку со статусом pending
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setMonth(endDate.getMonth() + parseInt(subscriptionDuration));
+    
+    const subscription = await Subscription.create({
+      userId: user.id,
+      type: subscriptionType,
+      duration: parseInt(subscriptionDuration),
+      startDate: startDate,
+      endDate: endDate,
+      isActive: false, // Не активна до подтверждения оплаты
+      paymentId: paymentId,
+      paymentStatus: 'pending'
     });
-
-    const finikData = await finikResponse.json();
-
-    if (finikData.success && finikData.paymentUrl) {
-      // Редиректим пользователя на страницу оплаты Finik
-      return res.redirect(finikData.paymentUrl);
-    } else {
-      return res.redirect(`/payment?type=${subscriptionType}&duration=${subscriptionDuration}&error=Ошибка при создании платежа`);
+    
+    // Подготовка данных для Finik
+    const finikPaymentData = {
+      Amount: finalPrice,
+      CardType: 'FINIK_QR',
+      PaymentId: paymentId,
+      RedirectUrl: `${process.env.FINIK_REDIRECT_URL || `${req.protocol}://${req.get('host')}/payment/success`}?paymentId=${paymentId}`,
+      Data: {
+        accountId: process.env.FINIK_ACCOUNT_ID,
+        merchantCategoryCode: '0742',
+        name_en: `Subscription ${subscriptionType} ${subscriptionDuration} months`,
+        webhookUrl: `${process.env.FINIK_REDIRECT_URL?.replace('/payment/success', '') || `${req.protocol}://${req.get('host')}`}${process.env.FINIK_WEBHOOK_PATH || '/webhooks/finik'}`,
+        description: `Подписка ${subscriptionType === 'individual' ? 'Индивидуальная' : 'Групповая'} на ${subscriptionDuration} ${subscriptionDuration === 1 ? 'месяц' : 'месяца'}`,
+        subscriptionId: subscription.id,
+        userId: user.id
+      }
+    };
+    
+    // Создание платежа в Finik
+    try {
+      const paymentResult = await createPayment(finikPaymentData);
+      
+      if (paymentResult.success && paymentResult.paymentUrl) {
+        // Редиректим пользователя на страницу оплаты Finik
+        return res.redirect(paymentResult.paymentUrl);
+      } else {
+        // Удаляем подписку, если платеж не создан
+        await subscription.destroy();
+        return res.redirect(`/payment?type=${subscriptionType}&duration=${subscriptionDuration}&error=Ошибка при создании платежа`);
+      }
+    } catch (error) {
+      console.error('Ошибка создания платежа Finik:', error);
+      // Удаляем подписку при ошибке
+      await subscription.destroy();
+      return res.redirect(`/payment?type=${subscriptionType}&duration=${subscriptionDuration}&error=Ошибка при создании платежа: ${error.message}`);
     }
   } catch (error) {
     console.error('Ошибка оформления подписки:', error);
