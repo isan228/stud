@@ -18,6 +18,61 @@ async function syncDatabase() {
       console.log('ENUM типы уже существуют или ошибка:', error.message);
     }
 
+    // Добавляем поля для Finik в таблицу Subscriptions, если их нет
+    try {
+      console.log('Проверяем поля Finik в таблице Subscriptions...');
+      
+      // Проверяем и добавляем paymentId
+      const paymentIdCheck = await sequelize.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'Subscriptions' AND column_name = 'paymentId';
+      `);
+      
+      if (paymentIdCheck[0].length === 0) {
+        await sequelize.query(`ALTER TABLE "Subscriptions" ADD COLUMN "paymentId" VARCHAR(255);`);
+        console.log('Добавлено поле paymentId');
+      }
+      
+      // Проверяем и добавляем transactionId
+      const transactionIdCheck = await sequelize.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'Subscriptions' AND column_name = 'transactionId';
+      `);
+      
+      if (transactionIdCheck[0].length === 0) {
+        await sequelize.query(`ALTER TABLE "Subscriptions" ADD COLUMN "transactionId" VARCHAR(255);`);
+        console.log('Добавлено поле transactionId');
+      }
+      
+      // Создаем ENUM тип для paymentStatus, если его нет
+      await sequelize.query(`
+        DO $$ 
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_Subscriptions_paymentStatus') THEN
+            CREATE TYPE "enum_Subscriptions_paymentStatus" AS ENUM('pending', 'succeeded', 'failed');
+          END IF;
+        END $$;
+      `);
+      
+      // Проверяем и добавляем paymentStatus
+      const paymentStatusCheck = await sequelize.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'Subscriptions' AND column_name = 'paymentStatus';
+      `);
+      
+      if (paymentStatusCheck[0].length === 0) {
+        await sequelize.query(`ALTER TABLE "Subscriptions" ADD COLUMN "paymentStatus" "enum_Subscriptions_paymentStatus" DEFAULT 'pending';`);
+        console.log('Добавлено поле paymentStatus');
+      }
+      
+      console.log('Поля Finik проверены/добавлены в таблицу Subscriptions.');
+    } catch (error) {
+      console.log('Ошибка при добавлении полей Finik:', error.message);
+    }
+
     // Полностью пересоздаем таблицу BonusTransactions, чтобы избежать проблем с ENUM и NOT NULL
     try {
       console.log('Пересоздаем таблицу BonusTransactions...');
