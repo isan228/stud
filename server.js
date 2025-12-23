@@ -65,6 +65,54 @@ const pgPool = new Pool({
   database: process.env.DB_NAME || 'studd'
 });
 
+// Функция для создания таблицы session, если её нет
+async function ensureSessionTable() {
+  try {
+    await pgPool.query(`
+      CREATE TABLE IF NOT EXISTS "session" (
+        "sid" varchar NOT NULL COLLATE "default",
+        "sess" json NOT NULL,
+        "expire" timestamp(6) NOT NULL
+      )
+      WITH (OIDS=FALSE);
+    `);
+    
+    // Проверяем, существует ли первичный ключ
+    const pkCheck = await pgPool.query(`
+      SELECT constraint_name 
+      FROM information_schema.table_constraints 
+      WHERE table_name = 'session' AND constraint_type = 'PRIMARY KEY';
+    `);
+    
+    if (pkCheck.rows.length === 0) {
+      await pgPool.query(`
+        ALTER TABLE "session" ADD CONSTRAINT "session_pkey" PRIMARY KEY ("sid") NOT DEFERRABLE INITIALLY IMMEDIATE;
+      `);
+    }
+    
+    // Создаем индекс, если его нет
+    const indexCheck = await pgPool.query(`
+      SELECT indexname 
+      FROM pg_indexes 
+      WHERE tablename = 'session' AND indexname = 'IDX_session_expire';
+    `);
+    
+    if (indexCheck.rows.length === 0) {
+      await pgPool.query(`
+        CREATE INDEX "IDX_session_expire" ON "session" ("expire");
+      `);
+    }
+    
+    console.log('Таблица session проверена/создана');
+  } catch (error) {
+    console.error('Ошибка при создании таблицы session:', error);
+    // Не блокируем запуск, если таблица уже существует или есть другие проблемы
+  }
+}
+
+// Создаем таблицу session перед настройкой сессий
+ensureSessionTable();
+
 // Настройка сессий
 app.use(session({
   store: new pgSession({
