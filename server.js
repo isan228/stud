@@ -44,7 +44,13 @@ app.use((req, res, next) => {
 // Middleware
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
+
+// Сохранение raw body для верификации подписи Finik
+app.use(bodyParser.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf.toString('utf8');
+  }
+}));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -102,6 +108,9 @@ app.use('/admin', require('./routes/admin-pdf'));
 app.use('/referral', require('./routes/referral'));
 app.use('/subscription', require('./routes/subscription'));
 app.use('/payment', require('./routes/payment'));
+app.use('/payment', require('./routes/payment-success'));
+app.use('/payment/finik', require('./routes/finik-payment'));
+app.use('/webhooks/finik', require('./routes/finik-webhook'));
 
 // Обработка ошибок
 app.use((err, req, res, next) => {

@@ -34,6 +34,21 @@ const Subscription = sequelize.define('Subscription', {
   isActive: {
     type: DataTypes.BOOLEAN,
     defaultValue: true
+  },
+  paymentId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'ID платежа в Finik'
+  },
+  transactionId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'ID транзакции в Finik'
+  },
+  paymentStatus: {
+    type: DataTypes.ENUM('pending', 'succeeded', 'failed'),
+    defaultValue: 'pending',
+    comment: 'Статус оплаты'
   }
 }, {
   timestamps: true

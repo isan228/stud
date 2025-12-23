@@ -177,52 +177,87 @@ router.post('/purchase', [
 
     const finalPrice = Math.max(0, basePrice - referralDiscount - bonusToUse);
 
-    // Создание подписки
-    const startDate = new Date();
-    const endDate = new Date();
-    endDate.setMonth(endDate.getMonth() + parseInt(subscriptionDuration));
+    // Если финальная цена 0 (оплачено бонусами), активируем подписку сразу
+    if (finalPrice === 0) {
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setMonth(endDate.getMonth() + parseInt(subscriptionDuration));
 
-    const subscription = await Subscription.create({
-      userId: user.id,
-      type: subscriptionType,
-      duration: parseInt(subscriptionDuration),
-      startDate: startDate,
-      endDate: endDate,
-      isActive: true
+      const subscription = await Subscription.create({
+        userId: user.id,
+        type: subscriptionType,
+        duration: parseInt(subscriptionDuration),
+        startDate: startDate,
+        endDate: endDate,
+        isActive: true,
+        paymentStatus: 'succeeded'
+      });
+
+      user.isSubscribed = true;
+      user.subscriptionEndDate = endDate;
+      
+      if (bonusToUse > 0) {
+        user.bonusBalance = Math.max(0, (user.bonusBalance || 0) - bonusToUse);
+        await BonusTransaction.create({
+          userId: user.id,
+          amount: -bonusToUse,
+          type: 'subscription_payment',
+          description: `Оплата подписки бонусами (${subscriptionType}, ${subscriptionDuration} мес.)`,
+          subscriptionId: subscription.id,
+          expiresAt: null
+        });
+      }
+
+      await user.save();
+
+      try {
+        await awardReferralBonuses(user.id, subscription.id);
+      } catch (error) {
+        console.error('Ошибка начисления реферальных бонусов:', error);
+      }
+
+      let successMsg = 'Подписка оформлена!';
+      if (referralDiscount > 0) successMsg += ` Применена скидка по реферальному коду: ${referralDiscount} сом.`;
+      if (bonusToUse > 0) successMsg += ` Использовано бонусов: ${bonusToUse} сом.`;
+
+      return res.redirect(`/profile?success=${encodeURIComponent(successMsg)}`);
+    }
+
+    // Если нужна оплата, создаем платеж через Finik
+    // Сохраняем данные в сессии для использования после оплаты
+    req.session.pendingPayment = {
+      subscriptionType,
+      subscriptionDuration,
+      bonusAmount: bonusToUse,
+      referralDiscount,
+      basePrice,
+      finalPrice
+    };
+
+    // Создаем платеж через Finik API
+    const fetch = require('node-fetch');
+    const finikResponse = await fetch(`${req.protocol}://${req.get('host')}/payment/finik/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': req.headers.cookie
+      },
+      body: JSON.stringify({
+        subscriptionType,
+        subscriptionDuration,
+        bonusAmount: bonusToUse,
+        referralCode
+      })
     });
 
-    // Обновление статуса подписки у пользователя
-    user.isSubscribed = true;
-    user.subscriptionEndDate = endDate;
-    
-    // Списываем бонусы, если использованы
-    if (bonusToUse > 0) {
-      user.bonusBalance = Math.max(0, (user.bonusBalance || 0) - bonusToUse);
+    const finikData = await finikResponse.json();
 
-      await BonusTransaction.create({
-        userId: user.id,
-        amount: -bonusToUse,
-        type: 'subscription_payment',
-        description: `Оплата подписки бонусами (${subscriptionType}, ${subscriptionDuration} мес.)`,
-        subscriptionId: subscription.id,
-        expiresAt: null
-      });
+    if (finikData.success && finikData.paymentUrl) {
+      // Редиректим пользователя на страницу оплаты Finik
+      return res.redirect(finikData.paymentUrl);
+    } else {
+      return res.redirect(`/payment?type=${subscriptionType}&duration=${subscriptionDuration}&error=Ошибка при создании платежа`);
     }
-
-    await user.save();
-
-    // Начисляем реферальные бонусы (только при первой покупке)
-    try {
-      await awardReferralBonuses(user.id, subscription.id);
-    } catch (error) {
-      console.error('Ошибка начисления реферальных бонусов:', error);
-    }
-
-    let successMsg = 'Подписка оформлена!';
-    if (referralDiscount > 0) successMsg += ` Применена скидка по реферальному коду: ${referralDiscount} сом.`;
-    if (bonusToUse > 0) successMsg += ` Использовано бонусов: ${bonusToUse} сом.`;
-
-    res.redirect(`/profile?success=${encodeURIComponent(successMsg)}`);
   } catch (error) {
     console.error('Ошибка оформления подписки:', error);
     res.redirect(`/payment?type=${req.body.subscriptionType}&duration=${req.body.subscriptionDuration}&error=Ошибка при оформлении подписки`);
