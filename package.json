@@ -7,7 +7,8 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "sync-db": "node sync-db.js",
-    "seed": "node seed-test-data.js"
+    "seed": "node seed-test-data.js",
+    "test:local": "echo 'Запустите: npm run dev' && echo 'И в другом терминале: ngrok http 5000'"
   },
   "keywords": [
     "education",
