@@ -1,10 +1,12 @@
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const path = require('path');
 const { sequelize } = require('./models');
+const { Pool } = require('pg');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -54,8 +56,21 @@ app.use(bodyParser.json({
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Настройка хранилища сессий в PostgreSQL
+const pgPool = new Pool({
+  user: process.env.DB_USER || 'studd_user',
+  password: process.env.DB_PASSWORD || '12345678',
+  host: process.env.DB_HOST || 'localhost',
+  port: process.env.DB_PORT || 5432,
+  database: process.env.DB_NAME || 'studd'
+});
+
 // Настройка сессий
 app.use(session({
+  store: new pgSession({
+    pool: pgPool,
+    tableName: 'session' // Таблица для хранения сессий
+  }),
   secret: process.env.SESSION_SECRET || 'stud-platform-secret-key-2025',
   resave: false,
   saveUninitialized: false,

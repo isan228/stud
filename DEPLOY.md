@@ -200,6 +200,31 @@ FINIK_WEBHOOK_PATH=/webhooks/finik
 openssl rand -base64 32
 ```
 
+**Настройка хранилища сессий в PostgreSQL:**
+
+Для продакшена сессии хранятся в базе данных, а не в памяти. Создайте таблицу для сессий:
+
+```bash
+# Подключитесь к базе данных
+sudo -u postgres psql studd
+
+# Выполните SQL скрипт
+\i /root/stud/create_session_table.sql
+
+# Или выполните вручную:
+CREATE TABLE IF NOT EXISTS "session" (
+  "sid" varchar NOT NULL COLLATE "default",
+  "sess" json NOT NULL,
+  "expire" timestamp(6) NOT NULL
+);
+ALTER TABLE "session" ADD CONSTRAINT "session_pkey" PRIMARY KEY ("sid");
+CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
+GRANT ALL ON TABLE "session" TO studd_user;
+
+# Выйдите
+\q
+```
+
 ## Шаг 4: Синхронизация базы данных
 
 ```bash
