@@ -26,7 +26,7 @@ app.use((req, res, next) => {
     "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
     "font-src 'self' https://cdn.jsdelivr.net data:; " +
     "img-src 'self' data: blob:; " +
-    "connect-src 'self'; " +
+    "connect-src 'self' https://cdn.jsdelivr.net; " +
     "media-src 'none'; " +
     "object-src 'none'; " +
     "frame-src 'none'; " +
