@@ -21,14 +21,15 @@ router.get('/success', async (req, res) => {
       if (transactionId) whereCondition.transactionId = transactionId;
       
       subscription = await Subscription.findOne({
-        where: whereCondition,
-        include: [{
-          model: User
-        }]
+        where: whereCondition
       });
       
       if (subscription) {
-        user = subscription.user;
+        // Получаем пользователя отдельным запросом
+        user = await User.findByPk(subscription.userId);
+        console.log('Найдена подписка по paymentId:', paymentId, 'userId:', subscription.userId);
+      } else {
+        console.log('Подписка не найдена по paymentId:', paymentId, 'transactionId:', transactionId);
       }
     }
     
@@ -49,28 +50,36 @@ router.get('/success', async (req, res) => {
       }
     }
     
-    // Если все еще не нашли, проверяем последние подписки (на случай, если вебхук еще не обработался)
-    if (!subscription && (paymentId || transactionId)) {
-      const whereCondition = {};
-      if (paymentId) whereCondition.paymentId = paymentId;
-      if (transactionId) whereCondition.transactionId = transactionId;
-      
+    // Если все еще не нашли подписку, но есть paymentId, ищем по частичному совпадению
+    if (!subscription && paymentId) {
       subscription = await Subscription.findOne({
-        where: whereCondition,
-        include: [{
-          model: User,
-          as: 'user'
-        }],
+        where: {
+          paymentId: { [Op.like]: `%${paymentId}%` }
+        },
         order: [['createdAt', 'DESC']]
       });
       
       if (subscription) {
-        user = subscription.user;
+        user = await User.findByPk(subscription.userId);
+        console.log('Найдена подписка по частичному paymentId:', paymentId);
       }
     }
     
-    // Если пользователь не найден, предлагаем войти
+    // Если пользователь не найден, но есть paymentId, показываем страницу с информацией
+    if (!user && paymentId) {
+      console.log('Пользователь не найден, но есть paymentId:', paymentId);
+      // Показываем страницу успеха даже без пользователя, но с сообщением
+      return res.render('payment-success', {
+        user: null,
+        subscription: null,
+        message: 'Оплата получена! Подписка будет активирована в ближайшее время. Пожалуйста, войдите в систему для проверки статуса.',
+        paymentId: paymentId
+      });
+    }
+    
+    // Если пользователь не найден и нет paymentId, предлагаем войти
     if (!user) {
+      console.log('Пользователь не найден и нет paymentId, редирект на логин');
       return res.redirect('/auth/login?message=Пожалуйста, войдите в систему для просмотра статуса подписки');
     }
     
@@ -119,7 +128,7 @@ router.get('/error', async (req, res) => {
       });
       
       if (subscription) {
-        user = subscription.user;
+        user = await User.findByPk(subscription.userId);
       }
     }
     

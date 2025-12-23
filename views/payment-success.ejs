@@ -1,0 +1,73 @@
+<%- include('partials/header', { title: 'Оплата успешна' }) %>
+
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card shadow">
+        <div class="card-body text-center p-5">
+          <% if (message) { %>
+            <div class="alert alert-success" role="alert">
+              <h4 class="alert-heading"><i class="bi bi-check-circle-fill"></i> <%= message %></h4>
+            </div>
+          <% } %>
+
+          <% if (user) { %>
+            <h2 class="mb-4">Спасибо, <%= user.nickname %>!</h2>
+          <% } else { %>
+            <h2 class="mb-4">Спасибо за оплату!</h2>
+          <% } %>
+
+          <% if (subscription) { %>
+            <div class="card bg-light mb-4">
+              <div class="card-body">
+                <h5 class="card-title">Информация о подписке</h5>
+                <p class="card-text">
+                  <strong>Тип:</strong> 
+                  <%= subscription.type === 'individual' ? 'Индивидуальная' : 'Групповая' %>
+                </p>
+                <p class="card-text">
+                  <strong>Длительность:</strong> <%= subscription.duration %> 
+                  <%= subscription.duration === 1 ? 'месяц' : subscription.duration < 5 ? 'месяца' : 'месяцев' %>
+                </p>
+                <% if (subscription.endDate) { %>
+                  <p class="card-text">
+                    <strong>Действует до:</strong> 
+                    <%= new Date(subscription.endDate).toLocaleDateString('ru-RU') %>
+                  </p>
+                <% } %>
+                <p class="card-text">
+                  <strong>Статус:</strong> 
+                  <% if (subscription.isActive) { %>
+                    <span class="badge bg-success">Активна</span>
+                  <% } else if (subscription.paymentStatus === 'pending') { %>
+                    <span class="badge bg-warning">Обрабатывается</span>
+                  <% } else { %>
+                    <span class="badge bg-secondary">Ожидает активации</span>
+                  <% } %>
+                </p>
+              </div>
+            </div>
+          <% } else if (paymentId) { %>
+            <div class="alert alert-info" role="alert">
+              <p>Ваш платеж получен. Подписка будет активирована в ближайшее время.</p>
+              <p class="mb-0"><small>ID платежа: <%= paymentId %></small></p>
+            </div>
+          <% } %>
+
+          <div class="mt-4">
+            <% if (user) { %>
+              <a href="/profile" class="btn btn-primary me-2">Перейти в профиль</a>
+              <a href="/subscription" class="btn btn-outline-primary">Управление подпиской</a>
+            <% } else { %>
+              <a href="/auth/login" class="btn btn-primary me-2">Войти в систему</a>
+              <a href="/" class="btn btn-outline-secondary">На главную</a>
+            <% } %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer') %>
+

@@ -1,0 +1,37 @@
+<%- include('partials/header', { title: 'Ошибка оплаты' }) %>
+
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card shadow">
+        <div class="card-body text-center p-5">
+          <div class="alert alert-danger" role="alert">
+            <h4 class="alert-heading"><i class="bi bi-exclamation-triangle-fill"></i> Ошибка при обработке платежа</h4>
+            <p><%= error %></p>
+          </div>
+
+          <% if (user) { %>
+            <h2 class="mb-4">Уважаемый, <%= user.nickname %>!</h2>
+          <% } else { %>
+            <h2 class="mb-4">Произошла ошибка</h2>
+          <% } %>
+
+          <p class="mb-4">К сожалению, при обработке вашего платежа произошла ошибка. Пожалуйста, попробуйте еще раз.</p>
+
+          <div class="mt-4">
+            <% if (user) { %>
+              <a href="/subscription" class="btn btn-primary me-2">Попробовать снова</a>
+              <a href="/profile" class="btn btn-outline-secondary">Вернуться в профиль</a>
+            <% } else { %>
+              <a href="/auth/login" class="btn btn-primary me-2">Войти в систему</a>
+              <a href="/" class="btn btn-outline-secondary">На главную</a>
+            <% } %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer') %>
+
