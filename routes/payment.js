@@ -3,7 +3,10 @@ const { body, validationResult } = require('express-validator');
 const { User, Subscription, BonusTransaction, Referral } = require('../models');
 const { requireAuth } = require('../middleware/auth');
 const { awardReferralBonuses, createReferral } = require('../utils/referral');
+const { createPayment } = require('../utils/finik');
 const { Op } = require('sequelize');
+const crypto = require('crypto');
+require('dotenv').config();
 const router = express.Router();
 
 // Все роуты требуют авторизации
