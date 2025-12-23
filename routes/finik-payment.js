@@ -62,7 +62,7 @@ router.post('/create', requireAuth, async (req, res) => {
       Amount: finalPrice,
       CardType: 'FINIK_QR',
       PaymentId: paymentId,
-      RedirectUrl: process.env.FINIK_REDIRECT_URL || 'https://stud.kg/payment/success',
+      RedirectUrl: `${process.env.FINIK_REDIRECT_URL || 'https://stud.kg/payment/success'}?paymentId=${paymentId}`,
       Data: {
         accountId: process.env.FINIK_ACCOUNT_ID,
         merchantCategoryCode: '0742',
