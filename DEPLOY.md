@@ -186,12 +186,12 @@ FINIK_PUBLIC_KEY_PROD="-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCA
 FINIK_PUBLIC_KEY_BETA="-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwlrlKz/8gLWd1ARWGA/8\no3a3Qy8G+hPifyqiPosiTY6nCHovANMIJXk6DH4qAqqZeLu8pLGxudkPbv8dSyG7\nF9PZEAryMPzjoB/9P/F6g0W46K/FHDtwTM3YIVvstbEbL19m8yddv/xCT9JPPJTb\nLsSTVZq5zCqvKzpupwlGS3Q3oPyLAYe+ZUn4Bx2J1WQrBu3b08fNaR3E8pAkCK27\nJqFnP0eFfa817VCtyVKcFHb5ij/D0eUP519Qr/pgn+gsoG63W4pPHN/pKwQUUiAy\nuLSHqL5S2yu1dffyMcMVi9E/Q2HCTcez5OvOllgOtkNYHSv9pnrMRuws3u87+hNT\nZwIDAQAB\n-----END PUBLIC KEY-----"
 
 # URL для редиректа после успешной оплаты
-FINIK_REDIRECT_URL=https://proort.kg/payment/success
+FINIK_REDIRECT_URL=https://stud.kg/payment/success
 
 # URL для редиректа при ошибке оплаты
-FINIK_ERROR_URL=https://proort.kg/payment/error
+FINIK_ERROR_URL=https://stud.kg/payment/error
 
-# Путь для вебхука (будет доступен по адресу: https://proort.kg/webhooks/finik)
+# Путь для вебхука (будет доступен по адресу: https://stud.kg/webhooks/finik)
 FINIK_WEBHOOK_PATH=/webhooks/finik
 ```
 
@@ -649,14 +649,14 @@ sudo nginx -T | grep -A 10 "stud-platform"
 
    Подождите 5-15 минут для распространения DNS, затем повторите:
    ```bash
-   sudo certbot --nginx -d proort.kg -d www.proort.kg
+   sudo certbot --nginx -d stud.kg -d www.stud.kg
    ```
 
 2. **Вариант 2: Получить сертификат только для основного домена**
 
    Если не нужен www поддомен, получите сертификат только для основного домена:
    ```bash
-   sudo certbot --nginx -d proort.kg
+   sudo certbot --nginx -d stud.kg
    ```
 
 #### Ошибка: 404 при проверке ACME challenge
@@ -668,8 +668,8 @@ sudo nginx -T | grep -A 10 "stud-platform"
 1. **Проверьте, что домен указывает на правильный IP:**
    ```bash
    # Проверка DNS
-   dig proort.kg +short
-   nslookup proort.kg
+   dig stud.kg +short
+   nslookup stud.kg
    
    # Должен вернуть IP вашего сервера (195.38.164.50)
    ```
@@ -708,7 +708,7 @@ sudo nginx -T | grep -A 10 "stud-platform"
    ```nginx
    server {
        listen 80;
-       server_name proort.kg www.proort.kg;
+       server_name stud.kg www.stud.kg;
 
        # Временный блок для Let's Encrypt (можно удалить после получения сертификата)
        location /.well-known/acme-challenge/ {
@@ -746,9 +746,9 @@ sudo nginx -T | grep -A 10 "stud-platform"
 
 5. **Повторите получение сертификата:**
    ```bash
-   sudo certbot --nginx -d proort.kg
+   sudo certbot --nginx -d stud.kg
    # Или с www, если DNS настроен:
-   sudo certbot --nginx -d proort.kg -d www.proort.kg
+   sudo certbot --nginx -d stud.kg -d www.stud.kg
    ```
 
 6. **После успешного получения сертификата:**
@@ -780,7 +780,7 @@ sudo certbot certificates
 sudo certbot renew --dry-run
 
 # Проверка доступности через HTTPS
-curl -I https://proort.kg
+curl -I https://stud.kg
 ```
 
 ## Безопасность
