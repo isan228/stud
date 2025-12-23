@@ -48,3 +48,4 @@ echo ""
 echo "📝 Просмотр логов: pm2 logs stud-platform"
 
 
+

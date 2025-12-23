@@ -19,3 +19,4 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO studd_user;
 SELECT 'Права на схему public успешно назначены!' AS status;
 \dn+ public
 
+

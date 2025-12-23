@@ -160,6 +160,39 @@ SESSION_SECRET=ваш_случайный_секретный_ключ_миним�
 
 # Настройки безопасности (для HTTPS)
 SECURE_COOKIES=false
+
+# ============================================
+# Настройки Finik Payment System
+# ============================================
+
+# Окружение: prod или beta
+FINIK_ENV=beta
+
+# API ключ от Finik
+FINIK_API_KEY=ваш_api_ключ_от_finik
+
+# Account ID от Finik
+FINIK_ACCOUNT_ID=ваш_account_id_от_finik
+
+# Приватный ключ (содержимое finik_private.pem)
+# ВАЖНО: Храните в одной строке или используйте \n для переносов
+# Пример: FINIK_PRIVATE_KEY_PEM="-----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----"
+FINIK_PRIVATE_KEY_PEM="-----BEGIN PRIVATE KEY-----\nВАШ_ПРИВАТНЫЙ_КЛЮЧ\n-----END PRIVATE KEY-----"
+
+# Публичный ключ для Production (от Finik)
+FINIK_PUBLIC_KEY_PROD="-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuF/PUmhMPPidcMxhZBPb\nBSGJoSphmCI+h6ru8fG8guAlcPMVlhs+ThTjw2LHABvciwtpj51ebJ4EqhlySPyT\nhqSfXI6Jp5dPGJNDguxfocohaz98wvT+WAF86DEglZ8dEsfoumojFUy5sTOBdHEu\ng94B4BbrJvjmBa1YIx9Azse4HFlWhzZoYPgyQpArhokeHOHIN2QFzJqeriANO+wV\naUMta2AhRVZHbfyJ36XPhGO6A5FYQWgjzkI65cxZs5LaNFmRx6pjnhjIeVKKgF99\n4OoYCzhuR9QmWkPl7tL4Kd68qa/xHLz0Psnuhm0CStWOYUu3J7ZpzRK8GoEXRcr8\ntQIDAQAB\n-----END PUBLIC KEY-----"
+
+# Публичный ключ для Beta (от Finik)
+FINIK_PUBLIC_KEY_BETA="-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwlrlKz/8gLWd1ARWGA/8\no3a3Qy8G+hPifyqiPosiTY6nCHovANMIJXk6DH4qAqqZeLu8pLGxudkPbv8dSyG7\nF9PZEAryMPzjoB/9P/F6g0W46K/FHDtwTM3YIVvstbEbL19m8yddv/xCT9JPPJTb\nLsSTVZq5zCqvKzpupwlGS3Q3oPyLAYe+ZUn4Bx2J1WQrBu3b08fNaR3E8pAkCK27\nJqFnP0eFfa817VCtyVKcFHb5ij/D0eUP519Qr/pgn+gsoG63W4pPHN/pKwQUUiAy\nuLSHqL5S2yu1dffyMcMVi9E/Q2HCTcez5OvOllgOtkNYHSv9pnrMRuws3u87+hNT\nZwIDAQAB\n-----END PUBLIC KEY-----"
+
+# URL для редиректа после успешной оплаты
+FINIK_REDIRECT_URL=https://proort.kg/payment/success
+
+# URL для редиректа при ошибке оплаты
+FINIK_ERROR_URL=https://proort.kg/payment/error
+
+# Путь для вебхука (будет доступен по адресу: https://proort.kg/webhooks/finik)
+FINIK_WEBHOOK_PATH=/webhooks/finik
 ```
 
 **Важно:** Сгенерируйте безопасный SESSION_SECRET:
@@ -323,7 +356,7 @@ sudo ln -s /etc/nginx/sites-available/stud-platform /etc/nginx/sites-enabled/
 sudo nginx -t
 
 # Перезагрузка Nginx
-sudo systemctl reload nginx
+    sudo systemctl reload nginx
 ```
 
 ### Вариант 2: Использование conf.d (альтернативный метод)
@@ -403,7 +436,7 @@ sudo ufw enable
 
 ```bash
 # Установка Certbot
-sudo apt install -y certbot python3-certbot-nginx
+    sudo apt install -y certbot python3-certbot-nginx
 
 # Получение SSL сертификата
 sudo certbot --nginx -d ваш_домен.com -d www.ваш_домен.com
@@ -596,6 +629,158 @@ sudo tail -f /var/log/nginx/error.log
 
 # Проверка, что конфигурация загружена
 sudo nginx -T | grep -A 10 "stud-platform"
+```
+
+### Проблемы с получением SSL сертификата (Certbot)
+
+#### Ошибка: DNS problem: NXDOMAIN для www.домен.com
+
+**Проблема:** DNS запись для поддомена www не настроена.
+
+**Решение:**
+
+1. **Вариант 1: Настроить DNS запись для www (рекомендуется)**
+
+   Добавьте A-запись для www.домен.com в настройках DNS вашего домена:
+   - Тип: A
+   - Имя: www
+   - Значение: IP вашего сервера (например, 195.38.164.50)
+   - TTL: 3600 (или по умолчанию)
+
+   Подождите 5-15 минут для распространения DNS, затем повторите:
+   ```bash
+   sudo certbot --nginx -d proort.kg -d www.proort.kg
+   ```
+
+2. **Вариант 2: Получить сертификат только для основного домена**
+
+   Если не нужен www поддомен, получите сертификат только для основного домена:
+   ```bash
+   sudo certbot --nginx -d proort.kg
+   ```
+
+#### Ошибка: 404 при проверке ACME challenge
+
+**Проблема:** Nginx не может обработать запросы Let's Encrypt для проверки домена.
+
+**Решение:**
+
+1. **Проверьте, что домен указывает на правильный IP:**
+   ```bash
+   # Проверка DNS
+   dig proort.kg +short
+   nslookup proort.kg
+   
+   # Должен вернуть IP вашего сервера (195.38.164.50)
+   ```
+
+2. **Проверьте конфигурацию Nginx:**
+   ```bash
+   # Просмотр текущей конфигурации
+   sudo cat /etc/nginx/sites-available/stud-platform
+   
+   # Или если используется conf.d
+   sudo cat /etc/nginx/conf.d/stud-platform.conf
+   ```
+
+3. **Убедитесь, что Nginx слушает на порту 80 и доступен из интернета:**
+   ```bash
+   # Проверка статуса
+   sudo systemctl status nginx
+   
+   # Проверка портов
+   sudo netstat -tlnp | grep :80
+   
+   # Проверка файрвола
+   sudo ufw status
+   # Если файрвол активен, убедитесь что порт 80 открыт:
+   sudo ufw allow 'Nginx HTTP'
+   ```
+
+4. **Временно добавьте location для ACME challenge в конфигурацию Nginx:**
+
+   Отредактируйте конфигурацию:
+   ```bash
+   sudo nano /etc/nginx/sites-available/stud-platform
+   ```
+
+   Добавьте перед блоком `location /`:
+   ```nginx
+   server {
+       listen 80;
+       server_name proort.kg www.proort.kg;
+
+       # Временный блок для Let's Encrypt (можно удалить после получения сертификата)
+       location /.well-known/acme-challenge/ {
+           root /var/www/html;
+           try_files $uri =404;
+       }
+
+       location / {
+           proxy_pass http://localhost:5000;
+           proxy_http_version 1.1;
+           proxy_set_header Upgrade $http_upgrade;
+           proxy_set_header Connection 'upgrade';
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Proto $scheme;
+           proxy_cache_bypass $http_upgrade;
+       }
+
+       client_max_body_size 50M;
+   }
+   ```
+
+   Создайте директорию для ACME challenge:
+   ```bash
+   sudo mkdir -p /var/www/html/.well-known/acme-challenge
+   sudo chown -R www-data:www-data /var/www/html
+   ```
+
+   Проверьте и перезагрузите Nginx:
+   ```bash
+   sudo nginx -t
+   sudo systemctl reload nginx
+   ```
+
+5. **Повторите получение сертификата:**
+   ```bash
+   sudo certbot --nginx -d proort.kg
+   # Или с www, если DNS настроен:
+   sudo certbot --nginx -d proort.kg -d www.proort.kg
+   ```
+
+6. **После успешного получения сертификата:**
+
+   Certbot автоматически обновит конфигурацию Nginx. Проверьте:
+   ```bash
+   sudo cat /etc/nginx/sites-available/stud-platform
+   ```
+
+   Обновите `.env` файл:
+   ```bash
+   nano ~/stud/.env
+   # Измените:
+   SECURE_COOKIES=true
+   ```
+
+   Перезапустите приложение:
+   ```bash
+   pm2 restart stud-platform
+   ```
+
+#### Проверка работы SSL
+
+```bash
+# Проверка сертификата
+sudo certbot certificates
+
+# Тест обновления сертификата
+sudo certbot renew --dry-run
+
+# Проверка доступности через HTTPS
+curl -I https://proort.kg
 ```
 
 ## Безопасность
