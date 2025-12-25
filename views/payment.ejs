@@ -280,36 +280,64 @@ document.getElementById('proceedToPaymentBtn')?.addEventListener('click', async 
     
     // Если пользователь не авторизован, добавляем данные регистрации
     const userIsAuthenticated = <%= typeof user !== 'undefined' && user ? 'true' : 'false' %>;
+    console.log('userIsAuthenticated:', userIsAuthenticated);
+    
     if (!userIsAuthenticated) {
-        const nickname = document.getElementById('nickname')?.value.trim();
-        const email = document.getElementById('email')?.value.trim();
-        const password = document.getElementById('password')?.value;
-        const confirmPassword = document.getElementById('confirmPassword')?.value;
-        const publicOffer = document.getElementById('publicOffer')?.checked;
-        const dataConsent = document.getElementById('dataConsent')?.checked;
+        const nicknameEl = document.getElementById('nickname');
+        const emailEl = document.getElementById('email');
+        const passwordEl = document.getElementById('password');
+        const confirmPasswordEl = document.getElementById('confirmPassword');
+        const publicOfferEl = document.getElementById('publicOffer');
+        const dataConsentEl = document.getElementById('dataConsent');
+        
+        console.log('Элементы формы:', {
+            nickname: !!nicknameEl,
+            email: !!emailEl,
+            password: !!passwordEl,
+            confirmPassword: !!confirmPasswordEl,
+            publicOffer: !!publicOfferEl,
+            dataConsent: !!dataConsentEl
+        });
+        
+        const nickname = nicknameEl?.value?.trim();
+        const email = emailEl?.value?.trim();
+        const password = passwordEl?.value;
+        const confirmPassword = confirmPasswordEl?.value;
+        const publicOffer = publicOfferEl?.checked;
+        const dataConsent = dataConsentEl?.checked;
+        
+        console.log('Данные регистрации из формы:', {
+            nickname,
+            email,
+            hasPassword: !!password,
+            passwordLength: password?.length,
+            confirmPasswordMatch: password === confirmPassword,
+            publicOffer,
+            dataConsent
+        });
         
         // Валидация данных регистрации
         if (!nickname || nickname.length < 3) {
             alert('Никнейм должен быть не менее 3 символов');
-            document.getElementById('nickname')?.focus();
+            nicknameEl?.focus();
             return;
         }
         
         if (!email || !email.includes('@')) {
             alert('Введите корректный email');
-            document.getElementById('email')?.focus();
+            emailEl?.focus();
             return;
         }
         
         if (!password || password.length < 6) {
             alert('Пароль должен быть не менее 6 символов');
-            document.getElementById('password')?.focus();
+            passwordEl?.focus();
             return;
         }
         
         if (password !== confirmPassword) {
             alert('Пароли не совпадают');
-            document.getElementById('confirmPassword')?.focus();
+            confirmPasswordEl?.focus();
             return;
         }
         
@@ -323,6 +351,8 @@ document.getElementById('proceedToPaymentBtn')?.addEventListener('click', async 
         requestData.password = password;
         requestData.publicOffer = publicOffer;
         requestData.dataConsent = dataConsent;
+        
+        console.log('Данные регистрации добавлены в requestData');
     }
     
     console.log('Отправка данных:', requestData);
