@@ -268,7 +268,9 @@ function sortObjectKeys(obj) {
 // Создание платежа в Finik
 async function createPayment(paymentData) {
   const baseUrl = getBaseUrl();
-  const host = new URL(baseUrl).host;
+  // Host должен быть без протокола, только домен (без порта для стандартных портов)
+  const urlObj = new URL(baseUrl);
+  const host = urlObj.hostname; // Используем hostname вместо host, чтобы убрать порт
   const apiKey = process.env.FINIK_API_KEY;
   const timestamp = Date.now().toString();
   
@@ -282,7 +284,7 @@ async function createPayment(paymentData) {
     httpMethod: 'POST',
     path: path,
     headers: {
-      Host: hostWithoutPort, // Используем host без порта
+      Host: host, // Используем hostname без порта
       'x-api-key': apiKey,
       'x-api-timestamp': timestamp
     },
