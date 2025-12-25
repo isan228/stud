@@ -39,11 +39,17 @@ function buildCanonicalStringForSigning(requestData) {
   });
   
   // Сортируем и формируем строку заголовков
-  // Пробуем формат с & (как в некоторых API)
+  // Согласно документации Finik: заголовки соединяются через &, последний БЕЗ & в конце
   const sortedHeaderKeys = Object.keys(headerMap).sort();
   const headerString = sortedHeaderKeys
-    .map(key => `${key}:${headerMap[key]}`)
-    .join('&');
+    .map((key, index) => {
+      const value = headerMap[key];
+      // Последний заголовок без & в конце
+      return index === sortedHeaderKeys.length - 1 
+        ? `${key}:${value}`
+        : `${key}:${value}&`;
+    })
+    .join('');
   
   // 4. Query параметры (если есть)
   let queryString = '';
