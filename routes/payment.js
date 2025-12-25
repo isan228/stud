@@ -217,19 +217,7 @@ router.post('/purchase', [
       return res.redirect('/auth/login?error=Необходима авторизация. Пожалуйста, войдите в систему.');
     }
     
-    // Проверяем сессию перед запросом к БД
-    if (!req.session?.userId) {
-      console.error('Сессия потеряна в начале POST /payment/purchase');
-      return res.redirect('/auth/login?error=Сессия истекла. Пожалуйста, войдите снова.');
-    }
-    
-    const user = await User.findByPk(req.session.userId);
-    console.log('Пользователь найден:', user ? user.id : 'не найден');
-
-    if (!user) {
-      console.error('Пользователь не найден для userId:', req.session.userId);
-      return res.redirect('/auth/login?error=Пользователь не найден');
-    }
+    console.log('Пользователь найден для оформления подписки:', user.id, user.nickname);
 
     const basePrice = PRICES[subscriptionType][parseInt(subscriptionDuration)];
     if (!basePrice) {
