@@ -251,16 +251,21 @@ router.post('/purchase', [
     });
     
     // Подготовка данных для Finik
+    // Формируем базовый URL без пробелов
+    const baseUrl = (process.env.FINIK_REDIRECT_URL || `${req.protocol}://${req.get('host')}`).trim().replace(/\s+/g, '');
+    const redirectUrl = `${baseUrl.replace(/\/payment\/success.*$/, '')}/payment/success?paymentId=${paymentId}`;
+    const webhookUrl = `${baseUrl.replace(/\/payment\/success.*$/, '')}${(process.env.FINIK_WEBHOOK_PATH || '/webhooks/finik').trim()}`;
+    
     const finikPaymentData = {
       Amount: finalPrice,
       CardType: 'FINIK_QR',
       PaymentId: paymentId,
-      RedirectUrl: `${process.env.FINIK_REDIRECT_URL || `${req.protocol}://${req.get('host')}/payment/success`}?paymentId=${paymentId}`,
+      RedirectUrl: redirectUrl,
       Data: {
         accountId: process.env.FINIK_ACCOUNT_ID,
         merchantCategoryCode: '0742',
         name_en: `Subscription ${subscriptionType} ${subscriptionDuration} months`,
-        webhookUrl: `${process.env.FINIK_REDIRECT_URL?.replace('/payment/success', '') || `${req.protocol}://${req.get('host')}`}${process.env.FINIK_WEBHOOK_PATH || '/webhooks/finik'}`,
+        webhookUrl: webhookUrl,
         description: `Подписка ${subscriptionType === 'individual' ? 'Индивидуальная' : 'Групповая'} на ${subscriptionDuration} ${subscriptionDuration === 1 ? 'месяц' : 'месяца'}`,
         subscriptionId: subscription.id,
         userId: user.id

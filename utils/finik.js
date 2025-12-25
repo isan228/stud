@@ -53,9 +53,10 @@ function buildCanonicalStringForSigning(requestData) {
       .join('&');
   }
   
-  // 5. Тело запроса (JSON, отсортированный по ключам)
+  // 5. Тело запроса (JSON, отсортированный по ключам, компактный формат)
   let bodyString = '';
   if (body && Object.keys(body).length > 0) {
+    // Используем компактный JSON без пробелов (как в документации Finik)
     bodyString = JSON.stringify(sortObjectKeys(body));
   }
   
@@ -82,6 +83,9 @@ function createSignature(requestData) {
     throw new Error('FINIK_PRIVATE_KEY_PEM не настроен в .env');
   }
 
+  // Убираем кавычки, если они есть (dotenv может их сохранить)
+  privateKey = privateKey.replace(/^["']|["']$/g, '');
+  
   // Обработка приватного ключа (замена \n на реальные переносы строк)
   privateKey = privateKey.replace(/\\n/g, '\n');
   
@@ -93,12 +97,21 @@ function createSignature(requestData) {
   
   // Проверяем, что ключ содержит заголовки PEM
   if (!privateKey.includes('-----BEGIN')) {
+    console.error('Ошибка: Приватный ключ не содержит заголовок BEGIN');
+    console.error('Первые 100 символов ключа:', privateKey.substring(0, 100));
     throw new Error('Приватный ключ должен быть в формате PEM с заголовками -----BEGIN PRIVATE KEY----- или -----BEGIN RSA PRIVATE KEY-----');
   }
   
   // Проверяем, что ключ содержит закрывающий заголовок
   if (!privateKey.includes('-----END')) {
+    console.error('Ошибка: Приватный ключ не содержит заголовок END');
     throw new Error('Приватный ключ должен содержать закрывающий заголовок -----END PRIVATE KEY----- или -----END RSA PRIVATE KEY-----');
+  }
+  
+  // Отладочная информация (только первые и последние символы)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Ключ загружен. Начинается с:', privateKey.substring(0, 50));
+    console.log('Заканчивается на:', privateKey.substring(privateKey.length - 50));
   }
 
   // Построение канонической строки
@@ -114,11 +127,7 @@ function createSignature(requestData) {
     let signature;
     
     try {
-      // Сначала пробуем использовать ключ напрямую (старый способ)
-      signature = signer.sign(privateKey, 'base64');
-      return signature;
-    } catch (error1) {
-      // Если не получилось, пробуем создать ключ объект
+      // Сначала пробуем создать ключ объект (более надежный способ)
       try {
         // Пробуем как PKCS#8 (-----BEGIN PRIVATE KEY-----)
         keyObject = crypto.createPrivateKey({
@@ -129,22 +138,33 @@ function createSignature(requestData) {
         return signature;
       } catch (error2) {
         // Если не получилось, пробуем как PKCS#1 (-----BEGIN RSA PRIVATE KEY-----)
-        try {
-          keyObject = crypto.createPrivateKey({
-            key: privateKey,
-            format: 'pem',
-            type: 'pkcs1'
-          });
-          signature = signer.sign(keyObject, 'base64');
-          return signature;
-        } catch (error3) {
-          // Если все варианты не сработали, выбрасываем ошибку
-          console.error('Ошибка при создании подписи:', error3.message);
-          console.error('Проверьте формат ключа. Должен быть PEM формат:');
-          console.error('  - PKCS#8: -----BEGIN PRIVATE KEY----- ... -----END PRIVATE KEY-----');
-          console.error('  - PKCS#1: -----BEGIN RSA PRIVATE KEY----- ... -----END RSA PRIVATE KEY-----');
-          throw new Error(`Ошибка создания подписи: ${error3.message}`);
-        }
+        keyObject = crypto.createPrivateKey({
+          key: privateKey,
+          format: 'pem',
+          type: 'pkcs1'
+        });
+        signature = signer.sign(keyObject, 'base64');
+        return signature;
+      }
+    } catch (error1) {
+      // Если создание ключ-объекта не сработало, пробуем напрямую
+      try {
+        signature = signer.sign(privateKey, 'base64');
+        return signature;
+      } catch (error2) {
+        // Если все варианты не сработали, выбрасываем ошибку с детальной информацией
+        console.error('=== Ошибка при создании подписи ===');
+        console.error('Тип ошибки:', error2.code || error2.name);
+        console.error('Сообщение:', error2.message);
+        console.error('Первые 100 символов ключа:', privateKey.substring(0, 100));
+        console.error('Последние 50 символов ключа:', privateKey.substring(privateKey.length - 50));
+        console.error('');
+        console.error('Проверьте:');
+        console.error('1. Ключ должен быть в формате PEM');
+        console.error('2. Ключ должен начинаться с -----BEGIN PRIVATE KEY----- или -----BEGIN RSA PRIVATE KEY-----');
+        console.error('3. Ключ должен заканчиваться на -----END PRIVATE KEY----- или -----END RSA PRIVATE KEY-----');
+        console.error('4. В .env файле ключ должен быть в кавычках с \\n для переносов строк');
+        throw new Error(`Ошибка создания подписи (${error2.code || error2.name}): ${error2.message}`);
       }
     }
   } catch (error) {
@@ -270,6 +290,34 @@ async function createPayment(paymentData) {
   
   const signature = createSignature(requestData);
   
+  // Отладочное логирование (только в development)
+  if (process.env.NODE_ENV === 'development') {
+    const canonicalString = buildCanonicalStringForSigning(requestData);
+    console.log('\n=== Отладка запроса к Finik ===');
+    console.log('Окружение:', process.env.FINIK_ENV || 'не указано');
+    console.log('Base URL:', baseUrl);
+    console.log('URL:', `${baseUrl}${path}`);
+    console.log('Host:', host);
+    console.log('API Key:', apiKey ? `${apiKey.substring(0, 10)}...` : 'НЕ НАСТРОЕН!');
+    console.log('Timestamp:', timestamp);
+    console.log('\nКаноническая строка для подписи:');
+    console.log('---');
+    console.log(canonicalString);
+    console.log('---');
+    console.log('Подпись (первые 50 символов):', signature.substring(0, 50) + '...');
+    console.log('Длина подписи:', signature.length);
+    console.log('\nТело запроса:');
+    console.log(JSON.stringify(paymentData, null, 2));
+    console.log('\nЗаголовки запроса:');
+    console.log({
+      'content-type': 'application/json',
+      'x-api-key': apiKey,
+      'x-api-timestamp': timestamp,
+      'signature': signature.substring(0, 20) + '...'
+    });
+    console.log('================================\n');
+  }
+  
   // Используем встроенный fetch (Node 18+) или node-fetch
   let fetch;
   try {
@@ -314,7 +362,39 @@ async function createPayment(paymentData) {
     };
   } else {
     const errorText = await response.text();
-    throw new Error(`Ошибка создания платежа: ${response.status} - ${errorText}`);
+    let errorDetails = errorText;
+    
+    // Пытаемся распарсить JSON ошибки
+    try {
+      const errorJson = JSON.parse(errorText);
+      errorDetails = JSON.stringify(errorJson, null, 2);
+      
+      // Логируем детали ошибки
+      console.error('\n=== Ошибка от Finik API ===');
+      console.error('Статус:', response.status);
+      console.error('Ответ:', errorDetails);
+      console.error('URL:', url);
+      console.error('Заголовки запроса:', {
+        'x-api-key': apiKey ? `${apiKey.substring(0, 10)}...` : 'НЕ НАСТРОЕН',
+        'x-api-timestamp': timestamp,
+        'signature': '...'
+      });
+      
+      // Если это 403, выводим дополнительные детали
+      if (response.status === 403) {
+        console.error('\nВозможные причины 403 Forbidden:');
+        console.error('1. Неправильная подпись (проверьте приватный ключ)');
+        console.error('2. Неправильный API ключ');
+        console.error('3. Неправильный формат канонической строки');
+        console.error('4. Неправильный формат тела запроса');
+        console.error('5. Проблемы с заголовками (Host, x-api-key, x-api-timestamp)');
+      }
+    } catch (e) {
+      // Если не JSON, просто выводим текст
+      errorDetails = errorText;
+    }
+    
+    throw new Error(`Ошибка создания платежа: ${response.status} - ${errorDetails}`);
   }
 }
 
