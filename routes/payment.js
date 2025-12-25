@@ -63,10 +63,7 @@ router.get('/', async (req, res) => {
       user: user ? {
         nickname: user.nickname,
         bonusBalance: user.bonusBalance || 0
-      } : {
-        nickname: 'Новый пользователь',
-        bonusBalance: 0
-      },
+      } : null, // Передаем null для неавторизованных пользователей
       subscription: {
         type,
         duration: parseInt(duration),
@@ -74,6 +71,7 @@ router.get('/', async (req, res) => {
         durationText,
         basePrice
       },
+      registrationData: parsedRegistrationData, // Передаем данные регистрации в шаблон
       error: req.query.error || null,
       success: req.query.success || null
     });

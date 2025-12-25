@@ -96,7 +96,7 @@
                     </div>
 
                     <!-- Бонусы -->
-                    <% if (user.bonusBalance && user.bonusBalance > 0) { %>
+                    <% if (typeof user !== 'undefined' && user && user.bonusBalance && user.bonusBalance > 0) { %>
                         <div class="mb-4">
                             <label for="bonusAmount" class="form-label fw-bold">
                                 <i class="bi bi-wallet2"></i> Использовать бонусов (до <%= user.bonusBalance %>):
