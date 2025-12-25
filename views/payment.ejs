@@ -283,6 +283,7 @@ document.getElementById('proceedToPaymentBtn')?.addEventListener('click', async 
     console.log('userIsAuthenticated:', userIsAuthenticated);
     
     if (!userIsAuthenticated) {
+        // Пытаемся получить данные из полей формы
         const nicknameEl = document.getElementById('nickname');
         const emailEl = document.getElementById('email');
         const passwordEl = document.getElementById('password');
@@ -299,14 +300,33 @@ document.getElementById('proceedToPaymentBtn')?.addEventListener('click', async 
             dataConsent: !!dataConsentEl
         });
         
-        const nickname = nicknameEl?.value?.trim();
-        const email = emailEl?.value?.trim();
-        const password = passwordEl?.value;
-        const confirmPassword = confirmPasswordEl?.value;
-        const publicOffer = publicOfferEl?.checked;
-        const dataConsent = dataConsentEl?.checked;
+        let nickname = nicknameEl?.value?.trim();
+        let email = emailEl?.value?.trim();
+        let password = passwordEl?.value;
+        let confirmPassword = confirmPasswordEl?.value;
+        let publicOffer = publicOfferEl?.checked;
+        let dataConsent = dataConsentEl?.checked;
         
-        console.log('Данные регистрации из формы:', {
+        // Если данные не найдены в форме, пытаемся получить из URL параметров
+        if (!nickname || !email || !password) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const registrationDataParam = urlParams.get('registrationData');
+            if (registrationDataParam) {
+                try {
+                    const registrationData = JSON.parse(decodeURIComponent(registrationDataParam));
+                    console.log('Данные регистрации из URL:', registrationData);
+                    if (!nickname) nickname = registrationData.nickname;
+                    if (!email) email = registrationData.email;
+                    if (!password) password = registrationData.password;
+                    if (publicOffer === undefined || publicOffer === null) publicOffer = registrationData.publicOffer;
+                    if (dataConsent === undefined || dataConsent === null) dataConsent = registrationData.dataConsent;
+                } catch (e) {
+                    console.error('Ошибка парсинга registrationData из URL:', e);
+                }
+            }
+        }
+        
+        console.log('Данные регистрации (после всех попыток):', {
             nickname,
             email,
             hasPassword: !!password,
@@ -352,7 +372,13 @@ document.getElementById('proceedToPaymentBtn')?.addEventListener('click', async 
         requestData.publicOffer = publicOffer;
         requestData.dataConsent = dataConsent;
         
-        console.log('Данные регистрации добавлены в requestData');
+        console.log('Данные регистрации добавлены в requestData:', {
+            nickname: requestData.nickname,
+            email: requestData.email,
+            hasPassword: !!requestData.password,
+            publicOffer: requestData.publicOffer,
+            dataConsent: requestData.dataConsent
+        });
     }
     
     console.log('Отправка данных:', requestData);
