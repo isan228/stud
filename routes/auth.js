@@ -74,19 +74,8 @@ router.post('/register', [
       console.log('Сессия сохранена, userId:', req.session.userId);
       console.log('Session ID после сохранения:', req.sessionID);
       
-      // Устанавливаем cookie явно (на случай, если она не установилась автоматически)
-      if (req.sessionID) {
-        const cookieName = 'connect.sid';
-        const cookieValue = req.sessionID;
-        const cookieOptions = {
-          maxAge: 24 * 60 * 60 * 1000, // 24 часа
-          httpOnly: true,
-          secure: process.env.SECURE_COOKIES === 'true' || false,
-          sameSite: process.env.SECURE_COOKIES === 'true' ? 'none' : 'lax'
-        };
-        res.cookie(cookieName, cookieValue, cookieOptions);
-        console.log('Cookie установлена явно:', cookieName, cookieValue.substring(0, 20) + '...');
-      }
+      // НЕ устанавливаем cookie явно - express-session делает это автоматически
+      // Явная установка может конфликтовать с подписью express-session
       
       console.log('Cookie перед редиректом:', req.headers.cookie);
       console.log('Set-Cookie заголовки:', res.getHeader('Set-Cookie'));
