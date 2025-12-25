@@ -252,9 +252,19 @@ router.post('/purchase', [
     
     // Подготовка данных для Finik
     // Формируем базовый URL без пробелов
-    const baseUrl = (process.env.FINIK_REDIRECT_URL || `${req.protocol}://${req.get('host')}`).trim().replace(/\s+/g, '');
-    const redirectUrl = `${baseUrl.replace(/\/payment\/success.*$/, '')}/payment/success?paymentId=${paymentId}`;
-    const webhookUrl = `${baseUrl.replace(/\/payment\/success.*$/, '')}${(process.env.FINIK_WEBHOOK_PATH || '/webhooks/finik').trim()}`;
+    let baseUrl = (process.env.FINIK_REDIRECT_URL || `${req.protocol}://${req.get('host')}`).trim().replace(/\s+/g, '');
+    
+    // Убираем путь из baseUrl, оставляя только домен
+    try {
+      const urlObj = new URL(baseUrl);
+      baseUrl = `${urlObj.protocol}//${urlObj.host}`;
+    } catch (e) {
+      // Если не удалось распарсить, просто убираем путь вручную
+      baseUrl = baseUrl.replace(/\/payment\/success.*$/, '').replace(/\/$/, '');
+    }
+    
+    const redirectUrl = `${baseUrl}/payment/success?paymentId=${paymentId}`;
+    const webhookUrl = `${baseUrl}${(process.env.FINIK_WEBHOOK_PATH || '/webhooks/finik').trim()}`;
     
     const finikPaymentData = {
       Amount: finalPrice,
