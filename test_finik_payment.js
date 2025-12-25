@@ -64,6 +64,11 @@ async function testFinikPayment() {
   
   try {
     console.log('Отправка запроса к Finik API...\n');
+    console.log('⚠️  ВАЖНО: Если вы видите ошибку 403, проверьте:');
+    console.log('1. Соответствует ли API ключ приватному ключу');
+    console.log('2. Правильно ли формируется каноническая строка');
+    console.log('3. Полные логи с канонической строкой (должны быть выше)\n');
+    
     const result = await createPayment(testPaymentData);
     
     console.log('✅ Успех! Результат:');
@@ -74,8 +79,10 @@ async function testFinikPayment() {
       console.log('Payment URL:', result.paymentUrl);
     }
   } catch (error) {
-    console.error('❌ Ошибка при создании платежа:');
+    console.error('\n❌ Ошибка при создании платежа:');
     console.error(error.message);
+    console.error('\n⚠️  ВАЖНО: Проверьте логи ВЫШЕ - там должна быть каноническая строка между ---');
+    console.error('Если канонической строки нет, значит логирование не работает.');
     console.error('\nПолная ошибка:', error);
     process.exit(1);
   }
