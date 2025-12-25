@@ -308,6 +308,8 @@ async function createPayment(paymentData) {
     console.log('Длина подписи:', signature.length);
     console.log('\nТело запроса:');
     console.log(JSON.stringify(paymentData, null, 2));
+    console.log('\nТело запроса (компактный формат, как отправляется):');
+    console.log(JSON.stringify(sortObjectKeys(paymentData)));
     console.log('\nЗаголовки запроса:');
     console.log({
       'content-type': 'application/json',

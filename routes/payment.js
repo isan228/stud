@@ -393,8 +393,9 @@ router.post('/purchase', [
     if (user) {
       paymentData.userId = user.id;
     } else {
-      // Если пользователь не авторизован, сохраняем данные регистрации в Data
-      paymentData.registrationData = {
+      // Если пользователь не авторизован, сохраняем данные регистрации в Data как JSON строку
+      // Finik может не принимать вложенные объекты, поэтому сериализуем в строку
+      const registrationData = {
         nickname: nickname.trim(),
         email: email.trim(),
         password: password, // Пароль будет захеширован при создании пользователя
@@ -402,6 +403,8 @@ router.post('/purchase', [
         dataConsent: dataConsent,
         referralCode: referralCode ? referralCode.trim() : null
       };
+      // Сохраняем как JSON строку в Data
+      paymentData.registrationData = JSON.stringify(registrationData);
     }
     
     const finikPaymentData = {

@@ -110,7 +110,20 @@ router.post('/', async (req, res) => {
       
       // Если пользователь не найден, но есть данные регистрации в webhookData, создаем пользователя
       if (!user && webhookData && webhookData.registrationData) {
-        const { registrationData } = webhookData;
+        let registrationData;
+        
+        // registrationData может быть строкой JSON или объектом
+        if (typeof webhookData.registrationData === 'string') {
+          try {
+            registrationData = JSON.parse(webhookData.registrationData);
+          } catch (parseError) {
+            console.error('Ошибка парсинга registrationData:', parseError);
+            return res.status(400).send('Invalid registrationData format');
+          }
+        } else {
+          registrationData = webhookData.registrationData;
+        }
+        
         console.log('Создание пользователя из данных регистрации после успешной оплаты');
         
         try {
