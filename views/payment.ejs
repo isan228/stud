@@ -207,25 +207,22 @@ calculateTotal();
 // Обработка кнопки "Перейти к оплате"
 document.getElementById('proceedToPaymentBtn')?.addEventListener('click', async function() {
     const form = document.getElementById('paymentForm');
-    const formData = new FormData(form);
     
-    // Явно добавляем subscriptionType и subscriptionDuration, если они не передались
-    const subscriptionType = formData.get('subscriptionType') || form.querySelector('input[name="subscriptionType"]')?.value || '<%= subscription.type %>';
-    const subscriptionDuration = formData.get('subscriptionDuration') || form.querySelector('input[name="subscriptionDuration"]')?.value || '<%= subscription.duration %>';
+    // Собираем данные из формы
+    const subscriptionType = form.querySelector('input[name="subscriptionType"]')?.value || '<%= subscription.type %>';
+    const subscriptionDuration = form.querySelector('input[name="subscriptionDuration"]')?.value || '<%= subscription.duration %>';
+    const bonusAmount = form.querySelector('input[name="bonusAmount"]')?.value || '0';
+    const referralCode = form.querySelector('input[name="referralCode"]')?.value || '';
     
-    if (!formData.get('subscriptionType')) {
-        formData.set('subscriptionType', subscriptionType);
-    }
-    if (!formData.get('subscriptionDuration')) {
-        formData.set('subscriptionDuration', subscriptionDuration);
-    }
+    // Формируем JSON данные
+    const requestData = {
+        subscriptionType: subscriptionType,
+        subscriptionDuration: parseInt(subscriptionDuration),
+        bonusAmount: parseInt(bonusAmount) || 0,
+        referralCode: referralCode.trim()
+    };
     
-    console.log('Отправка данных:', {
-        subscriptionType: formData.get('subscriptionType'),
-        subscriptionDuration: formData.get('subscriptionDuration'),
-        bonusAmount: formData.get('bonusAmount'),
-        referralCode: formData.get('referralCode')
-    });
+    console.log('Отправка данных:', requestData);
     
     const loadingIndicator = document.getElementById('loadingIndicator');
     const proceedBtn = document.getElementById('proceedToPaymentBtn');
@@ -239,9 +236,10 @@ document.getElementById('proceedToPaymentBtn')?.addEventListener('click', async 
         const response = await fetch('/payment/purchase', {
             method: 'POST',
             headers: {
+                'Content-Type': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
             },
-            body: formData,
+            body: JSON.stringify(requestData),
             redirect: 'manual' // Не следовать за редиректами автоматически
         });
         
