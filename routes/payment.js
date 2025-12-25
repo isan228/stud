@@ -347,12 +347,13 @@ router.post('/purchase', [
     const paymentId = crypto.randomUUID ? crypto.randomUUID() : require('uuid').v4();
     
     // Создаем временную подписку со статусом pending
+    // Если пользователь не авторизован, userId будет null (будет установлен после создания пользователя в webhook)
     const startDate = new Date();
     const endDate = new Date();
     endDate.setMonth(endDate.getMonth() + parseInt(subscriptionDuration));
     
     const subscription = await Subscription.create({
-      userId: user.id,
+      userId: user ? user.id : null, // null для неавторизованных пользователей
       type: subscriptionType,
       duration: parseInt(subscriptionDuration),
       startDate: startDate,
@@ -378,20 +379,37 @@ router.post('/purchase', [
     const redirectUrl = `${baseUrl}/payment/success?paymentId=${paymentId}`;
     const webhookUrl = `${baseUrl}${(process.env.FINIK_WEBHOOK_PATH || '/webhooks/finik').trim()}`;
     
+    // Подготавливаем данные для Data платежа
+    const paymentData = {
+      accountId: process.env.FINIK_ACCOUNT_ID,
+      merchantCategoryCode: '0742',
+      name_en: `Subscription ${subscriptionType} ${subscriptionDuration} months`,
+      webhookUrl: webhookUrl,
+      description: `Подписка ${subscriptionType === 'individual' ? 'Индивидуальная' : 'Групповая'} на ${subscriptionDuration} ${subscriptionDuration === 1 ? 'месяц' : 'месяца'}`,
+      subscriptionId: subscription.id
+    };
+    
+    // Если пользователь авторизован, добавляем userId
+    if (user) {
+      paymentData.userId = user.id;
+    } else {
+      // Если пользователь не авторизован, сохраняем данные регистрации в Data
+      paymentData.registrationData = {
+        nickname: nickname.trim(),
+        email: email.trim(),
+        password: password, // Пароль будет захеширован при создании пользователя
+        publicOffer: publicOffer,
+        dataConsent: dataConsent,
+        referralCode: referralCode ? referralCode.trim() : null
+      };
+    }
+    
     const finikPaymentData = {
       Amount: finalPrice,
       CardType: 'FINIK_QR',
       PaymentId: paymentId,
       RedirectUrl: redirectUrl,
-      Data: {
-        accountId: process.env.FINIK_ACCOUNT_ID,
-        merchantCategoryCode: '0742',
-        name_en: `Subscription ${subscriptionType} ${subscriptionDuration} months`,
-        webhookUrl: webhookUrl,
-        description: `Подписка ${subscriptionType === 'individual' ? 'Индивидуальная' : 'Групповая'} на ${subscriptionDuration} ${subscriptionDuration === 1 ? 'месяц' : 'месяца'}`,
-        subscriptionId: subscription.id,
-        userId: user.id
-      }
+      Data: paymentData
     };
     
     // Создание платежа в Finik

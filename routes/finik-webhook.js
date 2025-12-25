@@ -66,7 +66,8 @@ router.post('/', async (req, res) => {
       accountId,
       fields,
       requestDate,
-      transactionDate
+      transactionDate,
+      data: webhookData // Данные из Data платежа (могут содержать registrationData)
     } = req.body;
     
     console.log('Вебхук Finik получен:', {
@@ -105,11 +106,66 @@ router.post('/', async (req, res) => {
     
     // Обработка успешного платежа
     if (status === 'SUCCEEDED') {
-      const user = subscription.user || await User.findByPk(subscription.userId);
+      let user = subscription.user || await User.findByPk(subscription.userId);
+      
+      // Если пользователь не найден, но есть данные регистрации в webhookData, создаем пользователя
+      if (!user && webhookData && webhookData.registrationData) {
+        const { registrationData } = webhookData;
+        console.log('Создание пользователя из данных регистрации после успешной оплаты');
+        
+        try {
+          // Проверяем, не существует ли уже пользователь с таким email или nickname
+          const existingUser = await User.findOne({
+            where: {
+              [Op.or]: [
+                { email: registrationData.email },
+                { nickname: registrationData.nickname }
+              ]
+            }
+          });
+          
+          if (existingUser) {
+            console.error('Пользователь с таким email или nickname уже существует:', registrationData.email);
+            // Используем существующего пользователя
+            user = existingUser;
+          } else {
+            // Создаем нового пользователя
+            user = await User.create({
+              nickname: registrationData.nickname,
+              email: registrationData.email,
+              password: registrationData.password // Пароль будет автоматически захеширован в модели User
+            });
+            
+            console.log('Пользователь создан после успешной оплаты:', user.id, user.nickname);
+            
+            // Обрабатываем реферальный код, если он был указан
+            if (registrationData.referralCode) {
+              try {
+                const { createReferral } = require('../utils/referral');
+                await createReferral(registrationData.referralCode, user.id);
+                console.log('Реферальная связь создана для пользователя:', user.id);
+              } catch (error) {
+                console.error('Ошибка создания реферальной связи:', error);
+                // Не блокируем активацию подписки из-за ошибки реферального кода
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Ошибка создания пользователя после оплаты:', error);
+          return res.status(500).send('Error creating user');
+        }
+      }
       
       if (!user) {
         console.error('Пользователь не найден для подписки:', subscription.id);
         return res.status(404).send('User not found');
+      }
+      
+      // Обновляем подписку с userId, если он был null
+      if (!subscription.userId) {
+        await subscription.update({
+          userId: user.id
+        });
       }
       
       // Активируем подписку
