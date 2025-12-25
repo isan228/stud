@@ -49,6 +49,11 @@ const Subscription = sequelize.define('Subscription', {
     type: DataTypes.ENUM('pending', 'succeeded', 'failed'),
     defaultValue: 'pending',
     comment: 'Статус оплаты'
+  },
+  description: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: 'Описание подписки или временное хранилище данных регистрации (JSON)'
   }
 }, {
   timestamps: true

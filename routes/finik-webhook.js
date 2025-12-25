@@ -93,6 +93,8 @@ router.post('/', async (req, res) => {
       }]
     });
     
+    console.log('Подписка найдена:', subscription?.id, 'userId:', subscription?.userId, 'description:', subscription?.description?.substring(0, 50));
+    
     if (!subscription) {
       console.error('Подписка не найдена для платежа:', id, transactionId);
       return res.status(404).send('Subscription not found');
@@ -108,32 +110,45 @@ router.post('/', async (req, res) => {
     if (status === 'SUCCEEDED') {
       let user = subscription.user || await User.findByPk(subscription.userId);
       
-      // Если пользователь не найден, но есть данные регистрации в webhookData, создаем пользователя
-      // Данные регистрации могут быть в формате вложенного объекта или в плоском формате
-      if (!user && webhookData) {
+      // Если пользователь не найден, пытаемся получить данные регистрации из подписки
+      // Данные регистрации могут быть в webhookData или в поле description подписки
+      if (!user) {
         let registrationData = null;
         
-        // Проверяем, есть ли данные в формате вложенного объекта
-        if (webhookData.registrationData) {
-          if (typeof webhookData.registrationData === 'string') {
-            try {
-              registrationData = JSON.parse(webhookData.registrationData);
-            } catch (parseError) {
-              console.error('Ошибка парсинга registrationData:', parseError);
+        // Сначала проверяем webhookData (если данные были переданы через Data)
+        if (webhookData) {
+          // Проверяем, есть ли данные в формате вложенного объекта
+          if (webhookData.registrationData) {
+            if (typeof webhookData.registrationData === 'string') {
+              try {
+                registrationData = JSON.parse(webhookData.registrationData);
+              } catch (parseError) {
+                console.error('Ошибка парсинга registrationData:', parseError);
+              }
+            } else {
+              registrationData = webhookData.registrationData;
             }
-          } else {
-            registrationData = webhookData.registrationData;
+          } else if (webhookData.regNickname && webhookData.regEmail && webhookData.regPassword) {
+            // Данные в плоском формате (regNickname, regEmail, regPassword и т.д.)
+            registrationData = {
+              nickname: webhookData.regNickname,
+              email: webhookData.regEmail,
+              password: webhookData.regPassword,
+              publicOffer: webhookData.regPublicOffer,
+              dataConsent: webhookData.regDataConsent,
+              referralCode: webhookData.regReferralCode || null
+            };
           }
-        } else if (webhookData.regNickname && webhookData.regEmail && webhookData.regPassword) {
-          // Данные в плоском формате (regNickname, regEmail, regPassword и т.д.)
-          registrationData = {
-            nickname: webhookData.regNickname,
-            email: webhookData.regEmail,
-            password: webhookData.regPassword,
-            publicOffer: webhookData.regPublicOffer,
-            dataConsent: webhookData.regDataConsent,
-            referralCode: webhookData.regReferralCode || null
-          };
+        }
+        
+        // Если данные не найдены в webhookData, пытаемся получить из поля description подписки
+        if (!registrationData && subscription && subscription.description) {
+          try {
+            registrationData = JSON.parse(subscription.description);
+            console.log('Данные регистрации получены из поля description подписки');
+          } catch (parseError) {
+            console.error('Ошибка парсинга description подписки:', parseError);
+          }
         }
         
         if (registrationData) {

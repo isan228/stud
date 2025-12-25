@@ -429,8 +429,30 @@ router.post('/purchase', [
     const redirectUrl = `${baseUrl}/payment/success?paymentId=${paymentId}`;
     const webhookUrl = `${baseUrl}${(process.env.FINIK_WEBHOOK_PATH || '/webhooks/finik').trim()}`;
     
-    // Подготавливаем данные для Data платежа
-    const paymentData = {
+    // Если пользователь не авторизован, сохраняем данные регистрации в подписке
+    // Используем поле description или создаем отдельное поле для временного хранения
+    if (!user) {
+      const registrationDataJson = JSON.stringify({
+        nickname: nickname.trim(),
+        email: email.trim(),
+        password: password, // Пароль будет захеширован при создании пользователя
+        publicOffer: publicOffer,
+        dataConsent: dataConsent,
+        referralCode: referralCode ? referralCode.trim() : null
+      });
+      
+      // Сохраняем данные регистрации в поле description подписки (временно)
+      // В production лучше создать отдельное поле registrationData в модели Subscription
+      await subscription.update({
+        description: registrationDataJson // Временно используем description для хранения данных регистрации
+      });
+      
+      console.log('Данные регистрации сохранены в подписке:', subscription.id);
+    }
+    
+    // Формируем объект Data для Finik - только минимально необходимые поля
+    // Не передаем данные регистрации в Data, чтобы избежать проблем с подписью
+    const finikData = {
       accountId: process.env.FINIK_ACCOUNT_ID,
       merchantCategoryCode: '0742',
       name_en: `Subscription ${subscriptionType} ${subscriptionDuration} months`,
@@ -439,28 +461,9 @@ router.post('/purchase', [
       subscriptionId: subscription.id
     };
     
-    // Формируем объект Data для Finik
-    // Finik API может не принимать вложенные объекты, поэтому передаем данные в плоском формате
-    const finikData = {
-      subscriptionId: subscription.id,
-      subscriptionType: subscriptionType,
-      subscriptionDuration: parseInt(subscriptionDuration)
-    };
-    
     // Если пользователь авторизован, добавляем userId
     if (user) {
       finikData.userId = user.id;
-    } else {
-      // Если пользователь не авторизован, сохраняем данные регистрации в плоском формате
-      // Это может помочь избежать проблем с формированием канонической строки для подписи
-      finikData.regNickname = nickname.trim();
-      finikData.regEmail = email.trim();
-      finikData.regPassword = password; // Пароль будет захеширован при создании пользователя
-      finikData.regPublicOffer = publicOffer;
-      finikData.regDataConsent = dataConsent;
-      if (referralCode && referralCode.trim()) {
-        finikData.regReferralCode = referralCode.trim();
-      }
     }
     
     const finikPaymentData = {
