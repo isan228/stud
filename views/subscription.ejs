@@ -104,9 +104,21 @@
                         <h5><i class="bi bi-info-circle"></i> Регистрация</h5>
                         <p class="mb-0">Для оформления подписки необходимо заполнить данные регистрации на странице оплаты. Аккаунт будет создан после успешной оплаты.</p>
                     </div>
+                    
+                    <!-- Кнопка перехода к оплате для неавторизованных пользователей -->
+                    <form id="guestPurchaseForm" method="GET" action="/payment" class="mb-4">
+                        <input type="hidden" name="type" id="guestSubscriptionType">
+                        <input type="hidden" name="duration" id="guestSubscriptionDuration">
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg" id="guestGoToPaymentBtn" style="display: none;">
+                                <i class="bi bi-credit-card"></i> Перейти к оплате
+                            </button>
+                        </div>
+                    </form>
+                    
                     <div class="mb-4">
                         <h5>У вас уже есть аккаунт?</h5>
-                        <a href="/auth/login" class="btn btn-primary w-100 mb-3">
+                        <a href="/auth/login" class="btn btn-outline-primary w-100">
                             <i class="bi bi-box-arrow-in-right"></i> Войти в аккаунт
                         </a>
                     </div>
