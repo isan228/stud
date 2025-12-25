@@ -39,11 +39,11 @@ function buildCanonicalStringForSigning(requestData) {
   });
   
   // Сортируем и формируем строку заголовков
-  // ВАЖНО: Заголовки должны быть разделены через \n, а не через &
+  // Пробуем формат с & (как в некоторых API)
   const sortedHeaderKeys = Object.keys(headerMap).sort();
   const headerString = sortedHeaderKeys
     .map(key => `${key}:${headerMap[key]}`)
-    .join('\n');
+    .join('&');
   
   // 4. Query параметры (если есть)
   let queryString = '';
@@ -282,7 +282,7 @@ async function createPayment(paymentData) {
     httpMethod: 'POST',
     path: path,
     headers: {
-      Host: host,
+      Host: hostWithoutPort, // Используем host без порта
       'x-api-key': apiKey,
       'x-api-timestamp': timestamp
     },
