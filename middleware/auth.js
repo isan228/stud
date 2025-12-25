@@ -8,6 +8,9 @@ const requireAuth = (req, res, next) => {
   console.log('Session ID:', req.sessionID);
   console.log('Session userId:', req.session?.userId);
   console.log('Session exists:', !!req.session);
+  console.log('Cookie header:', req.headers.cookie);
+  console.log('Original URL:', req.originalUrl);
+  console.log('Path:', req.path);
   
   if (req.session?.userId) {
     console.log('Пользователь авторизован, пропускаем');

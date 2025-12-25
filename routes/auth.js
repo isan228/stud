@@ -75,8 +75,11 @@ router.post('/register', [
       
       // Если указана подписка, переходим на страницу оплаты
       if (subscriptionType && subscriptionDuration) {
+        const paymentUrl = `/payment?type=${encodeURIComponent(subscriptionType)}&duration=${encodeURIComponent(subscriptionDuration)}`;
         console.log('Редирект на /payment с параметрами:', subscriptionType, subscriptionDuration);
-        res.redirect(`/payment?type=${subscriptionType}&duration=${subscriptionDuration}`);
+        console.log('Полный URL редиректа:', paymentUrl);
+        console.log('Cookie перед редиректом:', req.headers.cookie);
+        res.redirect(paymentUrl);
       } else {
         res.redirect('/profile');
       }

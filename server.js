@@ -124,8 +124,12 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     secure: process.env.SECURE_COOKIES === 'true' || false,
-    maxAge: 24 * 60 * 60 * 1000 // 24 часа
-  }
+    httpOnly: true,
+    sameSite: process.env.SECURE_COOKIES === 'true' ? 'none' : 'lax',
+    maxAge: 24 * 60 * 60 * 1000, // 24 часа
+    domain: process.env.COOKIE_DOMAIN || undefined // Оставляем undefined для автоматического определения
+  },
+  name: 'connect.sid' // Явно указываем имя cookie
 }));
 
 // Установка EJS как шаблонизатора
