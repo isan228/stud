@@ -201,57 +201,12 @@ router.post('/purchase', [
   try {
     const { subscriptionType, subscriptionDuration, bonusAmount, referralCode } = req.body;
     
-    // Пытаемся найти пользователя по сессии
+    // Проверяем, авторизован ли пользователь
     let user = null;
     if (req.session?.userId) {
       user = await User.findByPk(req.session.userId);
-      console.log('Пользователь найден по сессии:', user?.nickname);
+      console.log('Пользователь авторизован:', user?.nickname);
     }
-    
-    // Если пользователь не найден по сессии, пытаемся найти последнего созданного пользователя
-    // (это может быть после регистрации, когда сессия еще не восстановилась)
-    if (!user) {
-      console.log('Пользователь не найден по сессии, ищем последнего созданного пользователя');
-      // Находим последнего созданного пользователя за последние 5 минут
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-      user = await User.findOne({
-        where: {
-          createdAt: {
-            [Op.gte]: fiveMinutesAgo
-          }
-        },
-        order: [['createdAt', 'DESC']]
-      });
-      
-      if (user) {
-        console.log('Найден последний созданный пользователь:', user.nickname);
-        // Восстанавливаем сессию
-        req.session.userId = user.id;
-        req.session.userNickname = user.nickname;
-        await new Promise((resolve, reject) => {
-          req.session.save((err) => {
-            if (err) {
-              console.error('Ошибка сохранения сессии:', err);
-              reject(err);
-            } else {
-              console.log('Сессия восстановлена для пользователя:', user.id);
-              resolve();
-            }
-          });
-        });
-      }
-    }
-    
-    if (!user) {
-      console.log('Пользователь не найден, редирект на логин');
-      const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
-      if (isAjax) {
-        return res.status(401).json({ error: 'Необходима авторизация. Пожалуйста, войдите в систему.' });
-      }
-      return res.redirect('/auth/login?error=Необходима авторизация. Пожалуйста, войдите в систему.');
-    }
-    
-    console.log('Пользователь найден для оформления подписки:', user.id, user.nickname);
 
     const basePrice = PRICES[subscriptionType][parseInt(subscriptionDuration)];
     if (!basePrice) {
