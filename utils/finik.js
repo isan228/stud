@@ -318,17 +318,32 @@ async function createPayment(paymentData) {
   console.error('🔍 Request Data подготовлен');
   console.error('🔍 Headers:', JSON.stringify(requestData.headers, null, 2));
   
-  // Отладочное логирование (всегда, для отладки 403 ошибок)
-  // ВАЖНО: Логируем ДО создания подписи, чтобы видеть каноническую строку
-  const canonicalString = buildCanonicalStringForSigning(requestData);
+  // Используем библиотеку @mancho.devs/authorizer для создания подписи
+  // Это гарантирует правильный формат канонической строки согласно документации Finik
+  let privateKey = process.env.FINIK_PRIVATE_KEY_PEM;
+  if (!privateKey) {
+    throw new Error('FINIK_PRIVATE_KEY_PEM не настроен в .env');
+  }
   
-  console.error('\n╔═══════════════════════════════════════════════════════════════╗');
-  console.error('║  КАНОНИЧЕСКАЯ СТРОКА ДЛЯ ПОДПИСИ (НАЧАЛО)                    ║');
-  console.error('╚═══════════════════════════════════════════════════════════════╝');
-  console.error(canonicalString);
-  console.error('╔═══════════════════════════════════════════════════════════════╗');
-  console.error('║  КАНОНИЧЕСКАЯ СТРОКА ДЛЯ ПОДПИСИ (КОНЕЦ)                     ║');
-  console.error('╚═══════════════════════════════════════════════════════════════╝\n');
+  // Обработка приватного ключа
+  privateKey = privateKey.replace(/^["']|["']$/g, '');
+  privateKey = privateKey.replace(/\\n/g, '\n');
+  privateKey = privateKey.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  privateKey = privateKey.trim();
+  
+  console.error('\n=== Использование библиотеки @mancho.devs/authorizer ===');
+  console.error('Base URL:', baseUrl);
+  console.error('Host:', host);
+  console.error('API Key:', apiKey ? `${apiKey.substring(0, 10)}...` : 'НЕ НАСТРОЕН!');
+  console.error('Timestamp:', timestamp);
+  console.error('Path:', path);
+  
+  // Создаем подпись с помощью библиотеки
+  const signer = new Signer(requestData);
+  const signature = await signer.sign(privateKey);
+  
+  console.error('✅ Подпись создана с помощью библиотеки @mancho.devs/authorizer');
+  console.error('Длина подписи:', signature.length, 'символов');
   
   console.log('\n========================================');
   console.log('=== ОТЛАДКА ЗАПРОСА К FINIK API ===');
@@ -339,14 +354,8 @@ async function createPayment(paymentData) {
   console.log('Host:', host);
   console.log('API Key:', apiKey ? `${apiKey.substring(0, 10)}...` : 'НЕ НАСТРОЕН!');
   console.log('Timestamp:', timestamp);
-  console.log('\n--- КАНОНИЧЕСКАЯ СТРОКА ДЛЯ ПОДПИСИ ---');
-  console.log(canonicalString);
-  console.log('--- КОНЕЦ КАНОНИЧЕСКОЙ СТРОКИ ---');
-  console.log('\nДлина канонической строки:', canonicalString.length, 'символов');
-  
-  const signature = createSignature(requestData);
-  
-  console.log('\nПодпись (первые 50 символов):', signature.substring(0, 50) + '...');
+  console.log('Используется библиотека: @mancho.devs/authorizer');
+  console.log('Подпись (первые 50 символов):', signature.substring(0, 50) + '...');
   console.log('Длина подписи:', signature.length, 'символов');
   console.log('\n--- ТЕЛО ЗАПРОСА (форматированное) ---');
   console.log(JSON.stringify(paymentData, null, 2));
