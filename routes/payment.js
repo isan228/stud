@@ -27,7 +27,7 @@ router.get('/', async (req, res) => {
     console.log('Original URL:', req.originalUrl);
     console.log('Path:', req.path);
     
-    const { type, duration } = req.query;
+    const { type, duration, registrationData } = req.query;
     
     // Проверяем параметры подписки
     if (!type || !duration) {
@@ -46,6 +46,9 @@ router.get('/', async (req, res) => {
     // (это может быть после регистрации, когда сессия еще не восстановилась)
     if (!user) {
       console.log('Пользователь не авторизован, но есть параметры подписки - разрешаем доступ');
+      if (registrationData) {
+        console.log('Данные регистрации переданы через query параметры');
+      }
     }
 
     const basePrice = PRICES[type]?.[parseInt(duration)];

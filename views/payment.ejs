@@ -36,32 +36,38 @@
                         </div>
                         <div class="card-body">
                             <div class="mb-3">
-                                <label for="regNickname" class="form-label">Никнейм <span class="text-danger">*</span>:</label>
-                                <input type="text" class="form-control" id="regNickname" name="regNickname" required minlength="3" maxlength="50">
+                                <label for="nickname" class="form-label">Никнейм <span class="text-danger">*</span>:</label>
+                                <input type="text" class="form-control" id="nickname" name="nickname" required minlength="3" maxlength="50" 
+                                       value="<%= typeof registrationData !== 'undefined' && registrationData ? registrationData.nickname || '' : '' %>">
                                 <small class="text-muted">Минимум 3 символа</small>
                             </div>
                             <div class="mb-3">
-                                <label for="regEmail" class="form-label">Email <span class="text-danger">*</span>:</label>
-                                <input type="email" class="form-control" id="regEmail" name="regEmail" required>
+                                <label for="email" class="form-label">Email <span class="text-danger">*</span>:</label>
+                                <input type="email" class="form-control" id="email" name="email" required 
+                                       value="<%= typeof registrationData !== 'undefined' && registrationData ? registrationData.email || '' : '' %>">
                             </div>
                             <div class="mb-3">
-                                <label for="regPassword" class="form-label">Пароль <span class="text-danger">*</span>:</label>
-                                <input type="password" class="form-control" id="regPassword" name="regPassword" required minlength="6">
+                                <label for="password" class="form-label">Пароль <span class="text-danger">*</span>:</label>
+                                <input type="password" class="form-control" id="password" name="password" required minlength="6"
+                                       value="<%= typeof registrationData !== 'undefined' && registrationData ? registrationData.password || '' : '' %>">
                                 <small class="text-muted">Минимум 6 символов</small>
                             </div>
                             <div class="mb-3">
-                                <label for="regConfirmPassword" class="form-label">Подтверждение пароля <span class="text-danger">*</span>:</label>
-                                <input type="password" class="form-control" id="regConfirmPassword" name="regConfirmPassword" required>
+                                <label for="confirmPassword" class="form-label">Подтверждение пароля <span class="text-danger">*</span>:</label>
+                                <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" required
+                                       value="<%= typeof registrationData !== 'undefined' && registrationData ? registrationData.password || '' : '' %>">
                             </div>
                             <div class="mb-3 form-check">
-                                <input type="checkbox" class="form-check-input" id="regPublicOffer" name="regPublicOffer" required>
-                                <label class="form-check-label" for="regPublicOffer">
+                                <input type="checkbox" class="form-check-input" id="publicOffer" name="publicOffer" required
+                                       <%= typeof registrationData !== 'undefined' && registrationData && registrationData.publicOffer ? 'checked' : '' %>>
+                                <label class="form-check-label" for="publicOffer">
                                     Я согласен с <a href="#" target="_blank">публичной офертой</a> <span class="text-danger">*</span>
                                 </label>
                             </div>
                             <div class="mb-3 form-check">
-                                <input type="checkbox" class="form-check-input" id="regDataConsent" name="regDataConsent" required>
-                                <label class="form-check-label" for="regDataConsent">
+                                <input type="checkbox" class="form-check-input" id="dataConsent" name="dataConsent" required
+                                       <%= typeof registrationData !== 'undefined' && registrationData && registrationData.dataConsent ? 'checked' : '' %>>
+                                <label class="form-check-label" for="dataConsent">
                                     Я согласен на обработку персональных данных <span class="text-danger">*</span>
                                 </label>
                             </div>
@@ -271,6 +277,53 @@ document.getElementById('proceedToPaymentBtn')?.addEventListener('click', async 
         bonusAmount: parseInt(bonusAmount) || 0,
         referralCode: referralCode.trim()
     };
+    
+    // Если пользователь не авторизован, добавляем данные регистрации
+    const userIsAuthenticated = <%= typeof user !== 'undefined' && user ? 'true' : 'false' %>;
+    if (!userIsAuthenticated) {
+        const nickname = document.getElementById('nickname')?.value.trim();
+        const email = document.getElementById('email')?.value.trim();
+        const password = document.getElementById('password')?.value;
+        const confirmPassword = document.getElementById('confirmPassword')?.value;
+        const publicOffer = document.getElementById('publicOffer')?.checked;
+        const dataConsent = document.getElementById('dataConsent')?.checked;
+        
+        // Валидация данных регистрации
+        if (!nickname || nickname.length < 3) {
+            alert('Никнейм должен быть не менее 3 символов');
+            document.getElementById('nickname')?.focus();
+            return;
+        }
+        
+        if (!email || !email.includes('@')) {
+            alert('Введите корректный email');
+            document.getElementById('email')?.focus();
+            return;
+        }
+        
+        if (!password || password.length < 6) {
+            alert('Пароль должен быть не менее 6 символов');
+            document.getElementById('password')?.focus();
+            return;
+        }
+        
+        if (password !== confirmPassword) {
+            alert('Пароли не совпадают');
+            document.getElementById('confirmPassword')?.focus();
+            return;
+        }
+        
+        if (!publicOffer || !dataConsent) {
+            alert('Необходимо согласиться с условиями');
+            return;
+        }
+        
+        requestData.nickname = nickname;
+        requestData.email = email;
+        requestData.password = password;
+        requestData.publicOffer = publicOffer;
+        requestData.dataConsent = dataConsent;
+    }
     
     console.log('Отправка данных:', requestData);
     console.log('Проверка полей формы:', {

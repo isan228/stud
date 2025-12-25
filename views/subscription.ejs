@@ -208,11 +208,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const subscriptionTypeInput = document.getElementById('subscriptionType');
     const subscriptionDurationInput = document.getElementById('subscriptionDuration');
     const purchaseForm = document.getElementById('purchaseForm');
+    
+    // Переменные для хранения выбранной подписки
+    let selectedType = null;
+    let selectedDuration = null;
 
     subscriptionOptions.forEach(option => {
         option.addEventListener('click', function() {
             const type = this.getAttribute('data-type');
             const duration = this.getAttribute('data-duration');
+            
+            // Сохраняем выбранные значения
+            selectedType = type;
+            selectedDuration = duration;
             
             // Убираем активный класс со всех кнопок
             subscriptionOptions.forEach(opt => opt.classList.remove('active'));
@@ -255,6 +263,66 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+    
+    // Обработчик кнопки "Перейти к оплате" для неавторизованных пользователей
+    const guestGoToPaymentBtn = document.getElementById('guestGoToPaymentBtn');
+    if (guestGoToPaymentBtn) {
+        guestGoToPaymentBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Проверяем, что подписка выбрана
+            if (!selectedType || !selectedDuration) {
+                alert('Пожалуйста, выберите тип и длительность подписки');
+                return;
+            }
+            
+            // Валидация формы регистрации
+            const registrationForm = document.getElementById('registrationForm');
+            if (!registrationForm.checkValidity()) {
+                registrationForm.reportValidity();
+                return;
+            }
+            
+            // Проверка паролей
+            const password = document.getElementById('regPassword').value;
+            const confirmPassword = document.getElementById('regConfirmPassword').value;
+            
+            if (password !== confirmPassword) {
+                alert('Пароли не совпадают!');
+                document.getElementById('regConfirmPassword').focus();
+                return;
+            }
+            
+            // Проверка согласий
+            const publicOffer = document.getElementById('regPublicOffer').checked;
+            const dataConsent = document.getElementById('regDataConsent').checked;
+            
+            if (!publicOffer || !dataConsent) {
+                alert('Необходимо согласиться с условиями!');
+                return;
+            }
+            
+            // Собираем данные регистрации
+            const registrationData = {
+                nickname: document.getElementById('regNickname').value.trim(),
+                email: document.getElementById('regEmail').value.trim(),
+                password: password,
+                publicOffer: publicOffer,
+                dataConsent: dataConsent,
+                referralCode: document.getElementById('referralCode').value.trim() || null
+            };
+            
+            // Формируем URL для перехода на страницу оплаты
+            const params = new URLSearchParams({
+                type: selectedType,
+                duration: selectedDuration,
+                registrationData: JSON.stringify(registrationData)
+            });
+            
+            // Переход на страницу оплаты
+            window.location.href = `/payment?${params.toString()}`;
+        });
+    }
 });
 </script>
 
