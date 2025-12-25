@@ -140,8 +140,8 @@ router.post('/check-referral', requireAuth, async (req, res) => {
   }
 });
 
-// Оформление подписки - требует авторизации
-router.post('/purchase', requireAuth, [
+// Оформление подписки - пытаемся найти пользователя по сессии или по последнему созданному
+router.post('/purchase', [
   body('subscriptionType').isIn(['individual', 'group']).withMessage('Неверный тип подписки'),
   body('subscriptionDuration').isInt({ min: 1, max: 12 }).withMessage('Неверная длительность подписки'),
   body('bonusAmount').optional().isInt({ min: 0 }).withMessage('Неверная сумма бонусов'),
@@ -150,17 +150,72 @@ router.post('/purchase', requireAuth, [
   // Логирование для отладки
   console.log('=== POST /payment/purchase ===');
   console.log('Сессия userId:', req.session?.userId);
+  console.log('Session ID:', req.sessionID);
   console.log('Сессия существует:', !!req.session);
   console.log('Body:', req.body);
   
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     console.log('Ошибки валидации:', errors.array());
+    const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
+    if (isAjax) {
+      return res.status(400).json({ error: errors.array()[0].msg });
+    }
     return res.redirect(`/payment?type=${req.body.subscriptionType}&duration=${req.body.subscriptionDuration}&error=${encodeURIComponent(errors.array()[0].msg)}`);
   }
 
   try {
     const { subscriptionType, subscriptionDuration, bonusAmount, referralCode } = req.body;
+    
+    // Пытаемся найти пользователя по сессии
+    let user = null;
+    if (req.session?.userId) {
+      user = await User.findByPk(req.session.userId);
+      console.log('Пользователь найден по сессии:', user?.nickname);
+    }
+    
+    // Если пользователь не найден по сессии, пытаемся найти последнего созданного пользователя
+    // (это может быть после регистрации, когда сессия еще не восстановилась)
+    if (!user) {
+      console.log('Пользователь не найден по сессии, ищем последнего созданного пользователя');
+      // Находим последнего созданного пользователя за последние 5 минут
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      user = await User.findOne({
+        where: {
+          createdAt: {
+            [Op.gte]: fiveMinutesAgo
+          }
+        },
+        order: [['createdAt', 'DESC']]
+      });
+      
+      if (user) {
+        console.log('Найден последний созданный пользователь:', user.nickname);
+        // Восстанавливаем сессию
+        req.session.userId = user.id;
+        req.session.userNickname = user.nickname;
+        await new Promise((resolve, reject) => {
+          req.session.save((err) => {
+            if (err) {
+              console.error('Ошибка сохранения сессии:', err);
+              reject(err);
+            } else {
+              console.log('Сессия восстановлена для пользователя:', user.id);
+              resolve();
+            }
+          });
+        });
+      }
+    }
+    
+    if (!user) {
+      console.log('Пользователь не найден, редирект на логин');
+      const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
+      if (isAjax) {
+        return res.status(401).json({ error: 'Необходима авторизация. Пожалуйста, войдите в систему.' });
+      }
+      return res.redirect('/auth/login?error=Необходима авторизация. Пожалуйста, войдите в систему.');
+    }
     
     // Проверяем сессию перед запросом к БД
     if (!req.session?.userId) {
