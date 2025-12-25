@@ -290,35 +290,33 @@ async function createPayment(paymentData) {
   
   const signature = createSignature(requestData);
   
-  // Отладочное логирование (только в development)
-  if (process.env.NODE_ENV === 'development') {
-    const canonicalString = buildCanonicalStringForSigning(requestData);
-    console.log('\n=== Отладка запроса к Finik ===');
-    console.log('Окружение:', process.env.FINIK_ENV || 'не указано');
-    console.log('Base URL:', baseUrl);
-    console.log('URL:', `${baseUrl}${path}`);
-    console.log('Host:', host);
-    console.log('API Key:', apiKey ? `${apiKey.substring(0, 10)}...` : 'НЕ НАСТРОЕН!');
-    console.log('Timestamp:', timestamp);
-    console.log('\nКаноническая строка для подписи:');
-    console.log('---');
-    console.log(canonicalString);
-    console.log('---');
-    console.log('Подпись (первые 50 символов):', signature.substring(0, 50) + '...');
-    console.log('Длина подписи:', signature.length);
-    console.log('\nТело запроса:');
-    console.log(JSON.stringify(paymentData, null, 2));
-    console.log('\nТело запроса (компактный формат, как отправляется):');
-    console.log(JSON.stringify(sortObjectKeys(paymentData)));
-    console.log('\nЗаголовки запроса:');
-    console.log({
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'x-api-timestamp': timestamp,
-      'signature': signature.substring(0, 20) + '...'
-    });
-    console.log('================================\n');
-  }
+  // Отладочное логирование (всегда, для отладки 403 ошибок)
+  const canonicalString = buildCanonicalStringForSigning(requestData);
+  console.log('\n=== Отладка запроса к Finik ===');
+  console.log('Окружение:', process.env.FINIK_ENV || 'не указано');
+  console.log('Base URL:', baseUrl);
+  console.log('URL:', `${baseUrl}${path}`);
+  console.log('Host:', host);
+  console.log('API Key:', apiKey ? `${apiKey.substring(0, 10)}...` : 'НЕ НАСТРОЕН!');
+  console.log('Timestamp:', timestamp);
+  console.log('\nКаноническая строка для подписи:');
+  console.log('---');
+  console.log(canonicalString);
+  console.log('---');
+  console.log('Подпись (первые 50 символов):', signature.substring(0, 50) + '...');
+  console.log('Длина подписи:', signature.length);
+  console.log('\nТело запроса:');
+  console.log(JSON.stringify(paymentData, null, 2));
+  console.log('\nТело запроса (компактный формат, как отправляется):');
+  console.log(JSON.stringify(sortObjectKeys(paymentData)));
+  console.log('\nЗаголовки запроса:');
+  console.log({
+    'content-type': 'application/json',
+    'x-api-key': apiKey,
+    'x-api-timestamp': timestamp,
+    'signature': signature.substring(0, 20) + '...'
+  });
+  console.log('================================\n');
   
   // Используем встроенный fetch (Node 18+) или node-fetch
   let fetch;
