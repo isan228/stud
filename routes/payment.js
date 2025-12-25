@@ -202,7 +202,19 @@ router.post('/purchase', [
   }
 
   try {
-    const { subscriptionType, subscriptionDuration, bonusAmount, referralCode } = req.body;
+    const { subscriptionType, subscriptionDuration, bonusAmount, referralCode, nickname, email, password, publicOffer, dataConsent } = req.body;
+    
+    console.log('Данные из запроса:', {
+      subscriptionType,
+      subscriptionDuration,
+      bonusAmount,
+      referralCode,
+      nickname,
+      email,
+      hasPassword: !!password,
+      publicOffer,
+      dataConsent
+    });
     
     // Проверяем, авторизован ли пользователь
     let user = null;
@@ -210,34 +222,102 @@ router.post('/purchase', [
       user = await User.findByPk(req.session.userId);
       console.log('Пользователь авторизован:', user?.nickname);
     }
+    
+    // Если пользователь НЕ авторизован, ОБЯЗАТЕЛЬНО требуем данные регистрации
+    if (!user) {
+      // Валидация данных регистрации
+      if (!nickname || !nickname.trim() || nickname.trim().length < 3) {
+        const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
+        if (isAjax) {
+          return res.status(400).json({ error: 'Никнейм должен быть не менее 3 символов' });
+        }
+        return res.redirect(`/payment?type=${subscriptionType}&duration=${subscriptionDuration}&error=${encodeURIComponent('Никнейм должен быть не менее 3 символов')}`);
+      }
+      
+      if (!email || !email.trim() || !email.includes('@')) {
+        const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
+        if (isAjax) {
+          return res.status(400).json({ error: 'Введите корректный email' });
+        }
+        return res.redirect(`/payment?type=${subscriptionType}&duration=${subscriptionDuration}&error=${encodeURIComponent('Введите корректный email')}`);
+      }
+      
+      if (!password || password.length < 6) {
+        const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
+        if (isAjax) {
+          return res.status(400).json({ error: 'Пароль должен быть не менее 6 символов' });
+        }
+        return res.redirect(`/payment?type=${subscriptionType}&duration=${subscriptionDuration}&error=${encodeURIComponent('Пароль должен быть не менее 6 символов')}`);
+      }
+      
+      if (!publicOffer || !dataConsent) {
+        const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
+        if (isAjax) {
+          return res.status(400).json({ error: 'Необходимо согласиться с условиями' });
+        }
+        return res.redirect(`/payment?type=${subscriptionType}&duration=${subscriptionDuration}&error=${encodeURIComponent('Необходимо согласиться с условиями')}`);
+      }
+      
+      // Проверяем, не существует ли уже пользователь с таким email или nickname
+      const existingUser = await User.findOne({
+        where: {
+          [Op.or]: [
+            { email: email.trim().toLowerCase() },
+            { nickname: nickname.trim() }
+          ]
+        }
+      });
+      
+      if (existingUser) {
+        console.log('Пользователь с таким email или nickname уже существует');
+        const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
+        if (isAjax) {
+          return res.status(400).json({ error: 'Пользователь с таким email или nickname уже существует. Войдите в систему или используйте другие данные.' });
+        }
+        return res.redirect(`/payment?type=${subscriptionType}&duration=${subscriptionDuration}&error=${encodeURIComponent('Пользователь с таким email или nickname уже существует. Войдите в систему или используйте другие данные.')}`);
+      }
+      
+      console.log('Пользователь не авторизован, данные регистрации будут сохранены в платеже и пользователь будет создан после успешной оплаты');
+    } else {
+      console.log('Пользователь авторизован для оформления подписки:', user.nickname);
+    }
 
     const basePrice = PRICES[subscriptionType][parseInt(subscriptionDuration)];
     if (!basePrice) {
       return res.redirect(`/payment?type=${subscriptionType}&duration=${subscriptionDuration}&error=Неверная комбинация типа и длительности подписки`);
     }
 
-    // Обработка реферального кода (если не был использован при регистрации)
+    // Обработка реферального кода
+    // Для авторизованных пользователей - создаем связь сразу
+    // Для неавторизованных - сохраняем код в registrationData, связь создастся после регистрации
     let referralDiscount = 0;
     if (referralCode && referralCode.trim()) {
-      try {
-        // Проверяем, нет ли уже активной связи
-        const existingReferral = await Referral.findOne({
-          where: {
-            referredId: user.id,
-            hasPurchased: false
-          }
-        });
+      if (user) {
+        // Для авторизованных пользователей
+        try {
+          // Проверяем, нет ли уже активной связи
+          const existingReferral = await Referral.findOne({
+            where: {
+              referredId: user.id,
+              hasPurchased: false
+            }
+          });
 
-        if (!existingReferral) {
-          // Создаем реферальную связь
-          await createReferral(referralCode.trim(), user.id);
+          if (!existingReferral) {
+            // Создаем реферальную связь
+            await createReferral(referralCode.trim(), user.id);
+          }
+          
+          // Реферальный код дает скидку 50 сом
+          referralDiscount = 50;
+        } catch (error) {
+          console.error('Ошибка создания реферальной связи:', error);
+          // Не блокируем покупку, если реферальный код неверный
         }
-        
-        // Реферальный код дает скидку 50 сом
+      } else {
+        // Для неавторизованных пользователей - реферальный код будет обработан после регистрации
+        // Но скидку все равно применяем
         referralDiscount = 50;
-      } catch (error) {
-        console.error('Ошибка создания реферальной связи:', error);
-        // Не блокируем покупку, если реферальный код неверный
       }
     }
 

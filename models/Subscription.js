@@ -9,7 +9,7 @@ const Subscription = sequelize.define('Subscription', {
   },
   userId: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true, // Разрешаем null для неавторизованных пользователей (будет установлен после создания пользователя в webhook)
     references: {
       model: 'Users',
       key: 'id'
