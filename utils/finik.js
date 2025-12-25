@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { Signer } = require('@mancho.devs/authorizer');
 require('dotenv').config();
 
 // Получение базового URL в зависимости от окружения
