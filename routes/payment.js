@@ -59,6 +59,17 @@ router.get('/', async (req, res) => {
     const typeText = type === 'individual' ? 'Индивидуальная' : 'Групповая';
     const durationText = duration === '1' ? '1 месяц' : duration === '3' ? '3 месяца' : '6 месяцев';
 
+    // Парсим данные регистрации, если они переданы
+    let parsedRegistrationData = null;
+    if (registrationData) {
+      try {
+        parsedRegistrationData = JSON.parse(decodeURIComponent(registrationData));
+        console.log('Данные регистрации распарсены:', parsedRegistrationData.email);
+      } catch (error) {
+        console.error('Ошибка парсинга registrationData:', error);
+      }
+    }
+
     res.render('payment', {
       user: user ? {
         nickname: user.nickname,
