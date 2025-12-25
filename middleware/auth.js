@@ -2,9 +2,18 @@ const { User } = require('../models');
 
 // Middleware для проверки авторизации
 const requireAuth = (req, res, next) => {
-  if (req.session.userId) {
+  console.log('=== requireAuth middleware ===');
+  console.log('URL:', req.url);
+  console.log('Method:', req.method);
+  console.log('Session ID:', req.sessionID);
+  console.log('Session userId:', req.session?.userId);
+  console.log('Session exists:', !!req.session);
+  
+  if (req.session?.userId) {
+    console.log('Пользователь авторизован, пропускаем');
     next();
   } else {
+    console.log('Пользователь НЕ авторизован, редирект на /auth/login');
     res.redirect('/auth/login');
   }
 };

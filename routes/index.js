@@ -10,6 +10,11 @@ router.get('/help', (req, res) => {
 });
 
 router.get('/subscription', (req, res) => {
+  console.log('=== GET /subscription (публичный роут) ===');
+  console.log('Session ID:', req.sessionID);
+  console.log('Session userId:', req.session?.userId);
+  console.log('Error query:', req.query.error);
+  
   const error = req.query.error || null;
   res.render('subscription', { error });
 });

@@ -6,11 +6,9 @@ const { awardReferralBonuses } = require('../utils/referral');
 const { Op } = require('sequelize');
 const router = express.Router();
 
-// Все роуты требуют авторизации
-router.use(requireAuth);
-
 // Оформление подписки с использованием бонусов
-router.post('/purchase', [
+// Применяем requireAuth только к POST роуту, а не ко всем роутам
+router.post('/purchase', requireAuth, [
   body('subscriptionType').isIn(['individual', 'group']).withMessage('Неверный тип подписки'),
   body('subscriptionDuration').isInt({ min: 1, max: 12 }).withMessage('Неверная длительность подписки'),
   body('bonusAmount').optional().isInt({ min: 0 }).withMessage('Неверная сумма бонусов')
