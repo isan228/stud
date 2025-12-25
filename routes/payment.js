@@ -142,8 +142,17 @@ router.post('/check-referral', requireAuth, async (req, res) => {
 
 // Оформление подписки - пытаемся найти пользователя по сессии или по последнему созданному
 router.post('/purchase', [
-  body('subscriptionType').isIn(['individual', 'group']).withMessage('Неверный тип подписки'),
-  body('subscriptionDuration').isInt({ min: 1, max: 12 }).withMessage('Неверная длительность подписки'),
+  body('subscriptionType')
+    .trim()
+    .isIn(['individual', 'group'])
+    .withMessage('Неверный тип подписки'),
+  body('subscriptionDuration')
+    .trim()
+    .custom((value) => {
+      const num = parseInt(value);
+      return !isNaN(num) && num >= 1 && num <= 12;
+    })
+    .withMessage('Неверная длительность подписки'),
   body('bonusAmount').optional().isInt({ min: 0 }).withMessage('Неверная сумма бонусов'),
   body('referralCode').optional().trim()
 ], async (req, res) => {
