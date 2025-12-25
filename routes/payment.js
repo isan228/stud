@@ -18,8 +18,8 @@ const PRICES = {
   group: { 3: 2400, 6: 4500 }
 };
 
-// Страница оплаты - требует авторизации
-router.get('/', requireAuth, async (req, res) => {
+// Страница оплаты - разрешена для новых пользователей после регистрации
+router.get('/', async (req, res) => {
   try {
     console.log('=== GET /payment ===');
     console.log('Сессия userId:', req.session?.userId);
@@ -28,16 +28,24 @@ router.get('/', requireAuth, async (req, res) => {
     console.log('Path:', req.path);
     
     const { type, duration } = req.query;
-    const user = await User.findByPk(req.session?.userId);
-
-    if (!user) {
-      console.log('Пользователь не найден, редирект на /auth/login');
-      return res.redirect('/auth/login?error=Необходима авторизация');
-    }
-
+    
+    // Проверяем параметры подписки
     if (!type || !duration) {
       console.log('Отсутствуют type или duration, редирект на /subscription');
       return res.redirect('/subscription?error=Выберите тип и длительность подписки');
+    }
+    
+    // Если пользователь авторизован, получаем его данные
+    let user = null;
+    if (req.session?.userId) {
+      user = await User.findByPk(req.session.userId);
+      console.log('Пользователь найден по сессии:', user?.nickname);
+    }
+    
+    // Если пользователь не авторизован, но есть параметры подписки - разрешаем доступ
+    // (это может быть после регистрации, когда сессия еще не восстановилась)
+    if (!user) {
+      console.log('Пользователь не авторизован, но есть параметры подписки - разрешаем доступ');
     }
 
     const basePrice = PRICES[type]?.[parseInt(duration)];
