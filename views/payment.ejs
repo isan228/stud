@@ -208,6 +208,25 @@ calculateTotal();
 document.getElementById('proceedToPaymentBtn')?.addEventListener('click', async function() {
     const form = document.getElementById('paymentForm');
     const formData = new FormData(form);
+    
+    // Явно добавляем subscriptionType и subscriptionDuration, если они не передались
+    const subscriptionType = formData.get('subscriptionType') || form.querySelector('input[name="subscriptionType"]')?.value || '<%= subscription.type %>';
+    const subscriptionDuration = formData.get('subscriptionDuration') || form.querySelector('input[name="subscriptionDuration"]')?.value || '<%= subscription.duration %>';
+    
+    if (!formData.get('subscriptionType')) {
+        formData.set('subscriptionType', subscriptionType);
+    }
+    if (!formData.get('subscriptionDuration')) {
+        formData.set('subscriptionDuration', subscriptionDuration);
+    }
+    
+    console.log('Отправка данных:', {
+        subscriptionType: formData.get('subscriptionType'),
+        subscriptionDuration: formData.get('subscriptionDuration'),
+        bonusAmount: formData.get('bonusAmount'),
+        referralCode: formData.get('referralCode')
+    });
+    
     const loadingIndicator = document.getElementById('loadingIndicator');
     const proceedBtn = document.getElementById('proceedToPaymentBtn');
     
