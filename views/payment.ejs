@@ -208,21 +208,31 @@ calculateTotal();
 document.getElementById('proceedToPaymentBtn')?.addEventListener('click', async function() {
     const form = document.getElementById('paymentForm');
     
-    // Собираем данные из формы
-    const subscriptionType = form.querySelector('input[name="subscriptionType"]')?.value || '<%= subscription.type %>';
-    const subscriptionDuration = form.querySelector('input[name="subscriptionDuration"]')?.value || '<%= subscription.duration %>';
+    // Получаем значения из скрытых полей или используем значения из шаблона
+    const subscriptionTypeInput = form.querySelector('input[name="subscriptionType"]');
+    const subscriptionDurationInput = form.querySelector('input[name="subscriptionDuration"]');
+    
+    // Используем значения из input или fallback на значения из шаблона
+    const subscriptionType = (subscriptionTypeInput && subscriptionTypeInput.value) ? subscriptionTypeInput.value : '<%= subscription.type %>';
+    const subscriptionDuration = (subscriptionDurationInput && subscriptionDurationInput.value) ? subscriptionDurationInput.value : '<%= subscription.duration %>';
     const bonusAmount = form.querySelector('input[name="bonusAmount"]')?.value || '0';
     const referralCode = form.querySelector('input[name="referralCode"]')?.value || '';
     
     // Формируем JSON данные
     const requestData = {
-        subscriptionType: subscriptionType,
+        subscriptionType: subscriptionType.trim(),
         subscriptionDuration: parseInt(subscriptionDuration),
         bonusAmount: parseInt(bonusAmount) || 0,
         referralCode: referralCode.trim()
     };
     
     console.log('Отправка данных:', requestData);
+    console.log('Проверка полей формы:', {
+        subscriptionTypeInput: subscriptionTypeInput?.value,
+        subscriptionDurationInput: subscriptionDurationInput?.value,
+        subscriptionTypeFinal: requestData.subscriptionType,
+        subscriptionDurationFinal: requestData.subscriptionDuration
+    });
     
     const loadingIndicator = document.getElementById('loadingIndicator');
     const proceedBtn = document.getElementById('proceedToPaymentBtn');
