@@ -152,11 +152,24 @@ router.post('/purchase', [
   console.log('Сессия userId:', req.session?.userId);
   console.log('Session ID:', req.sessionID);
   console.log('Сессия существует:', !!req.session);
-  console.log('Body:', req.body);
+  console.log('Body (raw):', req.body);
+  console.log('Content-Type:', req.headers['content-type']);
+  
+  // Нормализуем данные перед валидацией
+  if (req.body.subscriptionDuration) {
+    req.body.subscriptionDuration = parseInt(req.body.subscriptionDuration);
+  }
+  if (req.body.bonusAmount) {
+    req.body.bonusAmount = parseInt(req.body.bonusAmount) || 0;
+  }
+  
+  console.log('Body (normalized):', req.body);
   
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     console.log('Ошибки валидации:', errors.array());
+    console.log('subscriptionType:', req.body.subscriptionType, 'type:', typeof req.body.subscriptionType);
+    console.log('subscriptionDuration:', req.body.subscriptionDuration, 'type:', typeof req.body.subscriptionDuration);
     const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
     if (isAjax) {
       return res.status(400).json({ error: errors.array()[0].msg });
