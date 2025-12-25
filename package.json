@@ -35,8 +35,7 @@
     "pg-hstore": "^2.3.4",
     "pg-simple": "^0.2.2",
     "sequelize": "^6.35.0",
-    "uuid": "^9.0.1",
-    "@mancho.devs/authorizer": "^1.0.0"
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
