@@ -49,9 +49,12 @@ router.get('/', requireAuth, async (req, res) => {
     const durationText = duration === '1' ? '1 месяц' : duration === '3' ? '3 месяца' : '6 месяцев';
 
     res.render('payment', {
-      user: {
+      user: user ? {
         nickname: user.nickname,
         bonusBalance: user.bonusBalance || 0
+      } : {
+        nickname: 'Новый пользователь',
+        bonusBalance: 0
       },
       subscription: {
         type,
