@@ -114,11 +114,18 @@ async function ensureSessionTable() {
 ensureSessionTable();
 
 // Настройка сессий
+const sessionStore = new pgSession({
+  pool: pgPool,
+  tableName: 'session' // Таблица для хранения сессий
+});
+
+// Логирование для отладки сессий
+sessionStore.on('connect', () => {
+  console.log('Session store connected to PostgreSQL');
+});
+
 app.use(session({
-  store: new pgSession({
-    pool: pgPool,
-    tableName: 'session' // Таблица для хранения сессий
-  }),
+  store: sessionStore,
   secret: process.env.SESSION_SECRET || 'stud-platform-secret-key-2025',
   resave: false,
   saveUninitialized: false,
@@ -131,6 +138,20 @@ app.use(session({
   },
   name: 'connect.sid' // Явно указываем имя cookie
 }));
+
+// Middleware для логирования сессий
+app.use((req, res, next) => {
+  if (req.path === '/payment' || req.path.startsWith('/payment')) {
+    console.log('=== Session Debug ===');
+    console.log('Path:', req.path);
+    console.log('Original URL:', req.originalUrl);
+    console.log('Session ID from cookie:', req.cookies['connect.sid']);
+    console.log('Session ID from session:', req.sessionID);
+    console.log('Session userId:', req.session?.userId);
+    console.log('Cookie header:', req.headers.cookie);
+  }
+  next();
+});
 
 // Установка EJS как шаблонизатора
 app.set('view engine', 'ejs');
