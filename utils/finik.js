@@ -219,11 +219,17 @@ function buildCanonicalString(req) {
   });
   
   // Сортируем заголовки по имени
-  // ВАЖНО: Заголовки должны быть разделены через \n, а не через &
+  // Согласно документации Finik: заголовки соединяются через &, последний БЕЗ & в конце
   const sortedHeaderKeys = Object.keys(headers).sort();
   const headerString = sortedHeaderKeys
-    .map(key => `${key}:${headers[key]}`)
-    .join('\n');
+    .map((key, index) => {
+      const value = headers[key];
+      // Последний заголовок без & в конце
+      return index === sortedHeaderKeys.length - 1 
+        ? `${key}:${value}`
+        : `${key}:${value}&`;
+    })
+    .join('');
   
   // Query параметры (если есть)
   const queryParams = req.query;
