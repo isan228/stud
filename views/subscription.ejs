@@ -144,13 +144,22 @@
                         </button>
                     </form>
                 <% } else { %>
-                    <div class="text-center">
+                    <div class="text-center mb-4">
                         <p class="lead">Вы уже авторизованы как <strong><%= user.nickname %></strong></p>
-                        <p>Для оформления подписки свяжитесь с администратором или используйте форму оплаты.</p>
-                        <a href="/profile" class="btn btn-primary">
-                            <i class="bi bi-person-circle"></i> Перейти в личный кабинет
-                        </a>
+                        <p class="mb-3">Выберите подписку выше и нажмите на кнопку выбора, чтобы перейти к оплате.</p>
                     </div>
+                    <form id="purchaseForm" method="GET" action="/payment">
+                        <input type="hidden" name="subscriptionType" id="purchaseSubscriptionType">
+                        <input type="hidden" name="subscriptionDuration" id="purchaseSubscriptionDuration">
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg" id="goToPaymentBtn" style="display: none;">
+                                <i class="bi bi-credit-card"></i> Перейти к оплате
+                            </button>
+                            <a href="/profile" class="btn btn-outline-secondary">
+                                <i class="bi bi-person-circle"></i> Перейти в личный кабинет
+                            </a>
+                        </div>
+                    </form>
                 <% } %>
             </div>
         </div>
@@ -205,8 +214,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (purchaseDurationInput) purchaseDurationInput.value = duration;
             }
             
-            // Показываем модальное окно
-            modal.show();
+            // Если пользователь авторизован, показываем кнопку "Перейти к оплате" вместо модального окна
+            const goToPaymentBtn = document.getElementById('goToPaymentBtn');
+            const purchaseSubscriptionType = document.getElementById('purchaseSubscriptionType');
+            const purchaseSubscriptionDuration = document.getElementById('purchaseSubscriptionDuration');
+            
+            if (goToPaymentBtn && purchaseSubscriptionType && purchaseSubscriptionDuration) {
+                // Пользователь авторизован - показываем кнопку оплаты
+                purchaseSubscriptionType.value = type;
+                purchaseSubscriptionDuration.value = duration;
+                goToPaymentBtn.style.display = 'block';
+                goToPaymentBtn.innerHTML = `<i class="bi bi-credit-card"></i> Перейти к оплате (${typeText} ${durationText})`;
+                // Прокручиваем к кнопке
+                goToPaymentBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else {
+                // Пользователь не авторизован - показываем модальное окно
+                modal.show();
+            }
         });
     });
 });
