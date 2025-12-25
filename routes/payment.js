@@ -402,6 +402,21 @@ router.post('/purchase', [
     const endDate = new Date();
     endDate.setMonth(endDate.getMonth() + parseInt(subscriptionDuration));
     
+    // Если пользователь не авторизован, сохраняем данные регистрации в поле description
+    let descriptionValue = null;
+    if (!user) {
+      const registrationDataJson = JSON.stringify({
+        nickname: nickname.trim(),
+        email: email.trim(),
+        password: password, // Пароль будет захеширован при создании пользователя
+        publicOffer: publicOffer,
+        dataConsent: dataConsent,
+        referralCode: referralCode ? referralCode.trim() : null
+      });
+      descriptionValue = registrationDataJson;
+      console.log('Данные регистрации подготовлены для сохранения в подписке');
+    }
+    
     const subscription = await Subscription.create({
       userId: user ? user.id : null, // null для неавторизованных пользователей
       type: subscriptionType,
@@ -410,8 +425,11 @@ router.post('/purchase', [
       endDate: endDate,
       isActive: false, // Не активна до подтверждения оплаты
       paymentId: paymentId,
-      paymentStatus: 'pending'
+      paymentStatus: 'pending',
+      description: descriptionValue // Сохраняем данные регистрации сразу при создании
     });
+    
+    console.log('Подписка создана:', subscription.id, 'description:', descriptionValue ? 'есть' : 'нет');
     
     // Подготовка данных для Finik
     // Формируем базовый URL без пробелов
@@ -428,27 +446,6 @@ router.post('/purchase', [
     
     const redirectUrl = `${baseUrl}/payment/success?paymentId=${paymentId}`;
     const webhookUrl = `${baseUrl}${(process.env.FINIK_WEBHOOK_PATH || '/webhooks/finik').trim()}`;
-    
-    // Если пользователь не авторизован, сохраняем данные регистрации в подписке
-    // Используем поле description или создаем отдельное поле для временного хранения
-    if (!user) {
-      const registrationDataJson = JSON.stringify({
-        nickname: nickname.trim(),
-        email: email.trim(),
-        password: password, // Пароль будет захеширован при создании пользователя
-        publicOffer: publicOffer,
-        dataConsent: dataConsent,
-        referralCode: referralCode ? referralCode.trim() : null
-      });
-      
-      // Сохраняем данные регистрации в поле description подписки (временно)
-      // В production лучше создать отдельное поле registrationData в модели Subscription
-      await subscription.update({
-        description: registrationDataJson // Временно используем description для хранения данных регистрации
-      });
-      
-      console.log('Данные регистрации сохранены в подписке:', subscription.id);
-    }
     
     // Формируем объект Data для Finik - только минимально необходимые поля
     // Не передаем данные регистрации в Data, чтобы избежать проблем с подписью
