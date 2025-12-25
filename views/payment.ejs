@@ -23,7 +23,7 @@
 
                 <hr>
 
-                <form method="POST" action="/payment/purchase" id="paymentForm">
+                <form method="POST" action="/payment/purchase" id="paymentForm" onsubmit="event.preventDefault(); return false;">
                     <input type="hidden" name="subscriptionType" value="<%= subscription.type %>">
                     <input type="hidden" name="subscriptionDuration" value="<%= subscription.duration %>">
 
@@ -87,14 +87,22 @@
                     </div>
 
                     <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="bi bi-check-circle"></i> Оплатить и оформить подписку
+                        <button type="button" class="btn btn-primary btn-lg" id="proceedToPaymentBtn">
+                            <i class="bi bi-arrow-right-circle"></i> Перейти к оплате
                         </button>
                         <a href="/subscription" class="btn btn-outline-secondary">
                             <i class="bi bi-arrow-left"></i> Вернуться к выбору подписки
                         </a>
                     </div>
                 </form>
+                
+                <!-- Индикатор загрузки -->
+                <div id="loadingIndicator" class="text-center mt-3" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                    <p class="mt-2">Создание платежа...</p>
+                </div>
             </div>
         </div>
     </div>
@@ -195,6 +203,98 @@ document.getElementById('referralCode')?.addEventListener('keypress', function(e
 
 // Инициализация расчета
 calculateTotal();
+
+// Обработка кнопки "Перейти к оплате"
+document.getElementById('proceedToPaymentBtn')?.addEventListener('click', async function() {
+    const form = document.getElementById('paymentForm');
+    const formData = new FormData(form);
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const proceedBtn = document.getElementById('proceedToPaymentBtn');
+    
+    // Показываем индикатор загрузки
+    proceedBtn.disabled = true;
+    proceedBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Создание платежа...';
+    loadingIndicator.style.display = 'block';
+    
+    try {
+        const response = await fetch('/payment/purchase', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData,
+            redirect: 'manual' // Не следовать за редиректами автоматически
+        });
+        
+        // Обрабатываем разные типы ответов
+        if (response.ok) {
+            // Успешный ответ (200-299)
+            const contentType = response.headers.get('content-type');
+            
+            if (contentType && contentType.includes('application/json')) {
+                // JSON ответ
+                const data = await response.json();
+                
+                if (data.error) {
+                    alert('Ошибка: ' + data.error);
+                    proceedBtn.disabled = false;
+                    proceedBtn.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Перейти к оплате';
+                    loadingIndicator.style.display = 'none';
+                } else if (data.paymentUrl) {
+                    // Переходим на страницу оплаты Finik
+                    window.location.href = data.paymentUrl;
+                } else {
+                    alert('Не получен URL для оплаты');
+                    proceedBtn.disabled = false;
+                    proceedBtn.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Перейти к оплате';
+                    loadingIndicator.style.display = 'none';
+                }
+            } else {
+                // HTML ответ или другой формат
+                alert('Неожиданный формат ответа. Попробуйте еще раз.');
+                proceedBtn.disabled = false;
+                proceedBtn.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Перейти к оплате';
+                loadingIndicator.style.display = 'none';
+            }
+        } else if (response.status === 302 || response.status === 301) {
+            // Редирект - получаем URL из заголовка Location
+            const location = response.headers.get('Location');
+            if (location) {
+                window.location.href = location;
+            } else {
+                alert('Ошибка: получен редирект без URL');
+                proceedBtn.disabled = false;
+                proceedBtn.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Перейти к оплате';
+                loadingIndicator.style.display = 'none';
+            }
+        } else {
+            // Ошибка
+            let errorMessage = 'Ошибка при создании платежа';
+            try {
+                const data = await response.json();
+                if (data.error) {
+                    errorMessage = data.error;
+                }
+            } catch (e) {
+                const text = await response.text();
+                if (text) {
+                    errorMessage = text.substring(0, 200);
+                }
+            }
+            
+            alert(errorMessage);
+            proceedBtn.disabled = false;
+            proceedBtn.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Перейти к оплате';
+            loadingIndicator.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Ошибка:', error);
+        alert('Ошибка при создании платежа: ' + error.message);
+        proceedBtn.disabled = false;
+        proceedBtn.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Перейти к оплате';
+        loadingIndicator.style.display = 'none';
+    }
+});
 </script>
 
 <%- include('partials/footer') %>

@@ -306,9 +306,23 @@ router.post('/purchase', [
       const paymentResult = await createPayment(finikPaymentData);
       
       if (paymentResult.success && paymentResult.paymentUrl) {
-        console.log('Платеж создан успешно, редирект на:', paymentResult.paymentUrl);
-        // Редиректим пользователя на страницу оплаты Finik
-        return res.redirect(paymentResult.paymentUrl);
+        console.log('Платеж создан успешно, paymentUrl:', paymentResult.paymentUrl);
+        
+        // Проверяем, это AJAX запрос или обычный POST
+        const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest' || 
+                       req.headers['content-type']?.includes('application/json') ||
+                       req.headers['accept']?.includes('application/json');
+        
+        if (isAjax) {
+          // Возвращаем JSON для AJAX запроса
+          return res.json({
+            success: true,
+            paymentUrl: paymentResult.paymentUrl
+          });
+        } else {
+          // Обычный редирект для обычных POST запросов
+          return res.redirect(paymentResult.paymentUrl);
+        }
       } else {
         console.error('Платеж не создан, результат:', paymentResult);
         // Удаляем подписку, если платеж не создан
@@ -316,7 +330,16 @@ router.post('/purchase', [
         // Проверяем сессию перед редиректом
         if (!req.session.userId) {
           console.error('Сессия потеряна при ошибке создания платежа');
+          const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
+          if (isAjax) {
+            return res.status(401).json({ error: 'Сессия истекла. Пожалуйста, войдите снова.' });
+          }
           return res.redirect('/auth/login?error=Сессия истекла. Пожалуйста, войдите снова.');
+        }
+        
+        const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
+        if (isAjax) {
+          return res.status(400).json({ error: 'Ошибка при создании платежа' });
         }
         return res.redirect(`/payment?type=${subscriptionType}&duration=${subscriptionDuration}&error=Ошибка при создании платежа`);
       }
@@ -335,9 +358,17 @@ router.post('/purchase', [
       // Проверяем сессию перед редиректом
       if (!req.session.userId) {
         console.error('Сессия потеряна при ошибке');
+        const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
+        if (isAjax) {
+          return res.status(401).json({ error: 'Сессия истекла. Пожалуйста, войдите снова.' });
+        }
         return res.redirect('/auth/login?error=Сессия истекла. Пожалуйста, войдите снова.');
       }
       
+      const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
+      if (isAjax) {
+        return res.status(500).json({ error: `Ошибка при создании платежа: ${error.message}` });
+      }
       return res.redirect(`/payment?type=${subscriptionType}&duration=${subscriptionDuration}&error=Ошибка при создании платежа: ${error.message}`);
     }
   } catch (error) {
