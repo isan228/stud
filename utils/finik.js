@@ -213,10 +213,11 @@ function buildCanonicalString(req) {
   });
   
   // Сортируем заголовки по имени
+  // ВАЖНО: Заголовки должны быть разделены через \n, а не через &
   const sortedHeaderKeys = Object.keys(headers).sort();
   const headerString = sortedHeaderKeys
     .map(key => `${key}:${headers[key]}`)
-    .join('&');
+    .join('\n');
   
   // Query параметры (если есть)
   const queryParams = req.query;
