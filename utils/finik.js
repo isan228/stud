@@ -304,35 +304,40 @@ async function createPayment(paymentData) {
     body: paymentData
   };
   
-  const signature = createSignature(requestData);
-  
   // Отладочное логирование (всегда, для отладки 403 ошибок)
+  // ВАЖНО: Логируем ДО создания подписи, чтобы видеть каноническую строку
   const canonicalString = buildCanonicalStringForSigning(requestData);
-  console.log('\n=== Отладка запроса к Finik ===');
+  
+  console.log('\n========================================');
+  console.log('=== ОТЛАДКА ЗАПРОСА К FINIK API ===');
+  console.log('========================================');
   console.log('Окружение:', process.env.FINIK_ENV || 'не указано');
   console.log('Base URL:', baseUrl);
   console.log('URL:', `${baseUrl}${path}`);
   console.log('Host:', host);
   console.log('API Key:', apiKey ? `${apiKey.substring(0, 10)}...` : 'НЕ НАСТРОЕН!');
   console.log('Timestamp:', timestamp);
-  console.log('\nКаноническая строка для подписи:');
-  console.log('---');
+  console.log('\n--- КАНОНИЧЕСКАЯ СТРОКА ДЛЯ ПОДПИСИ ---');
   console.log(canonicalString);
-  console.log('---');
-  console.log('Подпись (первые 50 символов):', signature.substring(0, 50) + '...');
-  console.log('Длина подписи:', signature.length);
-  console.log('\nТело запроса:');
+  console.log('--- КОНЕЦ КАНОНИЧЕСКОЙ СТРОКИ ---');
+  console.log('\nДлина канонической строки:', canonicalString.length, 'символов');
+  
+  const signature = createSignature(requestData);
+  
+  console.log('\nПодпись (первые 50 символов):', signature.substring(0, 50) + '...');
+  console.log('Длина подписи:', signature.length, 'символов');
+  console.log('\n--- ТЕЛО ЗАПРОСА (форматированное) ---');
   console.log(JSON.stringify(paymentData, null, 2));
-  console.log('\nТело запроса (компактный формат, как отправляется):');
+  console.log('\n--- ТЕЛО ЗАПРОСА (компактный формат, как отправляется) ---');
   console.log(JSON.stringify(sortObjectKeys(paymentData)));
-  console.log('\nЗаголовки запроса:');
-  console.log({
+  console.log('\n--- ЗАГОЛОВКИ ЗАПРОСА ---');
+  console.log(JSON.stringify({
     'content-type': 'application/json',
     'x-api-key': apiKey,
     'x-api-timestamp': timestamp,
     'signature': signature.substring(0, 20) + '...'
-  });
-  console.log('================================\n');
+  }, null, 2));
+  console.log('\n========================================\n');
   
   // Используем встроенный fetch (Node 18+) или node-fetch
   let fetch;
