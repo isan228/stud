@@ -44,7 +44,9 @@ app.use((req, res, next) => {
 });
 
 // Middleware
-app.use(cookieParser());
+// ВАЖНО: cookieParser должен быть ПЕРЕД session middleware
+// И должен использовать тот же secret, что и express-session
+app.use(cookieParser(process.env.SESSION_SECRET || 'stud-platform-secret-key-2025'));
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Сохранение raw body для верификации подписи Finik
