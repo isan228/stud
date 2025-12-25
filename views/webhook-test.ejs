@@ -1,0 +1,46 @@
+<%- include('partials/header') %>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Проверка Webhook Finik</h4>
+                </div>
+                <div class="card-body">
+                    <h5>Статус Webhook Endpoint</h5>
+                    <hr>
+                    
+                    <div class="alert alert-success">
+                        <strong>✓ Endpoint доступен!</strong>
+                        <p class="mb-0">URL: <code>/webhooks/finik</code></p>
+                        <p class="mb-0">Метод: <code>POST</code></p>
+                    </div>
+                    
+                    <h5 class="mt-4">Информация</h5>
+                    <ul>
+                        <li><strong>URL для Finik:</strong> <code><%= webhookUrl %></code></li>
+                        <li><strong>Окружение:</strong> <code><%= env %></code></li>
+                        <li><strong>Время проверки:</strong> <code><%= timestamp %></code></li>
+                    </ul>
+                    
+                    <h5 class="mt-4">Как проверить через curl:</h5>
+                    <pre class="bg-light p-3"><code>curl -X GET <%= webhookUrl %></code></pre>
+                    
+                    <p class="text-muted">
+                        <strong>Примечание:</strong> GET запрос используется только для проверки доступности. 
+                        Finik отправляет POST запросы с данными о платежах.
+                    </p>
+                    
+                    <div class="alert alert-info mt-4">
+                        <strong>Для Finik укажите:</strong>
+                        <p class="mb-0"><code><%= webhookUrl %></code></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('partials/footer') %>
+

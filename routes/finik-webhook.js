@@ -9,6 +9,19 @@ const { Op } = require('sequelize');
 
 const router = express.Router();
 
+// GET endpoint для проверки доступности webhook (для тестирования)
+router.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'Finik webhook endpoint is available',
+    method: 'POST',
+    path: '/webhooks/finik',
+    description: 'Этот endpoint принимает POST запросы от Finik для уведомлений о статусе платежей',
+    timestamp: new Date().toISOString(),
+    server: process.env.NODE_ENV || 'development'
+  });
+});
+
 // Вебхук для обработки статусов платежей от Finik
 router.post('/', async (req, res) => {
   try {

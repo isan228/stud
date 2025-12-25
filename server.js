@@ -174,6 +174,7 @@ app.use('/payment', require('./routes/payment'));
 app.use('/payment', require('./routes/payment-success'));
 app.use('/payment/finik', require('./routes/finik-payment'));
 app.use('/webhooks/finik', require('./routes/finik-webhook'));
+app.use('/webhook-test', require('./routes/webhook-test'));
 
 // Обработка ошибок
 app.use((err, req, res, next) => {
