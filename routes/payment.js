@@ -283,17 +283,20 @@ router.post('/purchase', [
       }
     }
 
-    // Использование бонусов
-    const bonusToUse = Math.min(
-      parseInt(bonusAmount || 0),
-      user.bonusBalance || 0,
-      basePrice - referralDiscount // Нельзя использовать больше, чем стоит подписка после скидки
-    );
+    // Использование бонусов (только для авторизованных пользователей)
+    let bonusToUse = 0;
+    if (user && user.bonusBalance) {
+      bonusToUse = Math.min(
+        parseInt(bonusAmount || 0),
+        user.bonusBalance || 0,
+        basePrice - referralDiscount // Нельзя использовать больше, чем стоит подписка после скидки
+      );
+    }
 
     const finalPrice = Math.max(0, basePrice - referralDiscount - bonusToUse);
 
-    // Если финальная цена 0 (оплачено бонусами), активируем подписку сразу
-    if (finalPrice === 0) {
+    // Если финальная цена 0 (оплачено бонусами) И пользователь авторизован, активируем подписку сразу
+    if (finalPrice === 0 && user) {
       const startDate = new Date();
       const endDate = new Date();
       endDate.setMonth(endDate.getMonth() + parseInt(subscriptionDuration));
