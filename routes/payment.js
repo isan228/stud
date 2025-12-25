@@ -439,13 +439,20 @@ router.post('/purchase', [
       subscriptionId: subscription.id
     };
     
+    // Формируем объект Data для Finik
+    const finikData = {
+      subscriptionId: subscription.id,
+      subscriptionType: subscriptionType,
+      subscriptionDuration: parseInt(subscriptionDuration)
+    };
+    
     // Если пользователь авторизован, добавляем userId
     if (user) {
-      paymentData.userId = user.id;
+      finikData.userId = user.id;
     } else {
-      // Если пользователь не авторизован, сохраняем данные регистрации в Data как JSON строку
-      // Finik может не принимать вложенные объекты, поэтому сериализуем в строку
-      const registrationData = {
+      // Если пользователь не авторизован, сохраняем данные регистрации
+      // Передаем как обычный объект, а не JSON строку, чтобы не нарушать формат подписи
+      finikData.registrationData = {
         nickname: nickname.trim(),
         email: email.trim(),
         password: password, // Пароль будет захеширован при создании пользователя
@@ -453,8 +460,6 @@ router.post('/purchase', [
         dataConsent: dataConsent,
         referralCode: referralCode ? referralCode.trim() : null
       };
-      // Сохраняем как JSON строку в Data
-      paymentData.registrationData = JSON.stringify(registrationData);
     }
     
     const finikPaymentData = {
@@ -462,8 +467,10 @@ router.post('/purchase', [
       CardType: 'FINIK_QR',
       PaymentId: paymentId,
       RedirectUrl: redirectUrl,
-      Data: paymentData
+      Data: finikData
     };
+    
+    console.log('Finik Payment Data:', JSON.stringify(finikPaymentData, null, 2));
     
     // Создание платежа в Finik
     try {
