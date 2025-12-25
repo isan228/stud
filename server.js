@@ -46,7 +46,9 @@ app.use((req, res, next) => {
 // Middleware
 // ВАЖНО: cookieParser должен быть ПЕРЕД session middleware
 // И должен использовать тот же secret, что и express-session
-app.use(cookieParser(process.env.SESSION_SECRET || 'stud-platform-secret-key-2025'));
+// Но сначала получаем secret
+const sessionSecret = process.env.SESSION_SECRET || 'stud-platform-secret-key-2025';
+app.use(cookieParser(sessionSecret));
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Сохранение raw body для верификации подписи Finik
@@ -66,6 +68,10 @@ const pgPool = new Pool({
   port: process.env.DB_PORT || 5432,
   database: process.env.DB_NAME || 'studd'
 });
+
+// Секрет для сессий - должен быть одинаковым везде
+const sessionSecret = process.env.SESSION_SECRET || 'stud-platform-secret-key-2025';
+console.log('Session secret используется:', sessionSecret.substring(0, 10) + '...');
 
 // Функция для создания таблицы session, если её нет
 async function ensureSessionTable() {
