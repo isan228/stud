@@ -161,18 +161,30 @@ router.post('/purchase', [
   console.log('Сессия userId:', req.session?.userId);
   console.log('Session ID:', req.sessionID);
   console.log('Сессия существует:', !!req.session);
-  console.log('Body (raw):', req.body);
   console.log('Content-Type:', req.headers['content-type']);
+  console.log('Body (raw):', req.body);
+  console.log('Body type:', typeof req.body);
+  console.log('Body keys:', Object.keys(req.body || {}));
+  console.log('subscriptionType (raw):', req.body.subscriptionType, 'type:', typeof req.body.subscriptionType);
+  console.log('subscriptionDuration (raw):', req.body.subscriptionDuration, 'type:', typeof req.body.subscriptionDuration);
   
   // Нормализуем данные перед валидацией
-  if (req.body.subscriptionDuration) {
+  if (req.body.subscriptionType) {
+    req.body.subscriptionType = String(req.body.subscriptionType).trim();
+  }
+  if (req.body.subscriptionDuration !== undefined && req.body.subscriptionDuration !== null) {
     req.body.subscriptionDuration = parseInt(req.body.subscriptionDuration);
   }
-  if (req.body.bonusAmount) {
+  if (req.body.bonusAmount !== undefined && req.body.bonusAmount !== null) {
     req.body.bonusAmount = parseInt(req.body.bonusAmount) || 0;
+  }
+  if (req.body.referralCode) {
+    req.body.referralCode = String(req.body.referralCode).trim();
   }
   
   console.log('Body (normalized):', req.body);
+  console.log('subscriptionType (normalized):', req.body.subscriptionType, 'type:', typeof req.body.subscriptionType);
+  console.log('subscriptionDuration (normalized):', req.body.subscriptionDuration, 'type:', typeof req.body.subscriptionDuration);
   
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
