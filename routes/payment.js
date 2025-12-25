@@ -9,8 +9,8 @@ const crypto = require('crypto');
 require('dotenv').config();
 const router = express.Router();
 
-// Все роуты требуют авторизации
-router.use(requireAuth);
+// Применяем requireAuth только к конкретным роутам, а не ко всем
+// Это позволяет GET /payment обрабатываться правильно
 
 // Цены подписок
 const PRICES = {
@@ -18,12 +18,14 @@ const PRICES = {
   group: { 3: 2400, 6: 4500 }
 };
 
-// Страница оплаты
-router.get('/', async (req, res) => {
+// Страница оплаты - требует авторизации
+router.get('/', requireAuth, async (req, res) => {
   try {
     console.log('=== GET /payment ===');
     console.log('Сессия userId:', req.session?.userId);
     console.log('Query params:', req.query);
+    console.log('Original URL:', req.originalUrl);
+    console.log('Path:', req.path);
     
     const { type, duration } = req.query;
     const user = await User.findByPk(req.session?.userId);
@@ -67,8 +69,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Проверка реферального кода (AJAX)
-router.post('/check-referral', async (req, res) => {
+// Проверка реферального кода (AJAX) - требует авторизации
+router.post('/check-referral', requireAuth, async (req, res) => {
   try {
     const { referralCode } = req.body;
     const user = await User.findByPk(req.session.userId);
@@ -127,8 +129,8 @@ router.post('/check-referral', async (req, res) => {
   }
 });
 
-// Оформление подписки
-router.post('/purchase', [
+// Оформление подписки - требует авторизации
+router.post('/purchase', requireAuth, [
   body('subscriptionType').isIn(['individual', 'group']).withMessage('Неверный тип подписки'),
   body('subscriptionDuration').isInt({ min: 1, max: 12 }).withMessage('Неверная длительность подписки'),
   body('bonusAmount').optional().isInt({ min: 0 }).withMessage('Неверная сумма бонусов'),
