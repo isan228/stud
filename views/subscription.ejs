@@ -102,15 +102,58 @@
                 <% if (typeof user === 'undefined' || !user) { %>
                     <div class="alert alert-info mb-4">
                         <h5><i class="bi bi-info-circle"></i> Регистрация</h5>
-                        <p class="mb-0">Для оформления подписки необходимо заполнить данные регистрации на странице оплаты. Аккаунт будет создан после успешной оплаты.</p>
+                        <p class="mb-0">Для оформления подписки необходимо заполнить данные регистрации. Аккаунт будет создан после успешной оплаты.</p>
                     </div>
                     
-                    <!-- Кнопка перехода к оплате для неавторизованных пользователей -->
-                    <form id="guestPurchaseForm" method="GET" action="/payment" class="mb-4">
-                        <input type="hidden" name="type" id="guestSubscriptionType">
-                        <input type="hidden" name="duration" id="guestSubscriptionDuration">
+                    <!-- Форма регистрации -->
+                    <form id="registrationForm" class="mb-4">
+                        <div class="card mb-3">
+                            <div class="card-header bg-secondary text-white">
+                                <h6 class="mb-0"><i class="bi bi-person-plus"></i> Данные для регистрации</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="regNickname" class="form-label">Никнейм <span class="text-danger">*</span>:</label>
+                                    <input type="text" class="form-control" id="regNickname" name="regNickname" required minlength="3" maxlength="50">
+                                    <small class="text-muted">Минимум 3 символа</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="regEmail" class="form-label">Email <span class="text-danger">*</span>:</label>
+                                    <input type="email" class="form-control" id="regEmail" name="regEmail" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="regPassword" class="form-label">Пароль <span class="text-danger">*</span>:</label>
+                                    <input type="password" class="form-control" id="regPassword" name="regPassword" required minlength="6">
+                                    <small class="text-muted">Минимум 6 символов</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="regConfirmPassword" class="form-label">Подтверждение пароля <span class="text-danger">*</span>:</label>
+                                    <input type="password" class="form-control" id="regConfirmPassword" name="regConfirmPassword" required>
+                                </div>
+                                <div class="mb-3 form-check">
+                                    <input type="checkbox" class="form-check-input" id="regPublicOffer" name="regPublicOffer" required>
+                                    <label class="form-check-label" for="regPublicOffer">
+                                        Я согласен с <a href="#" target="_blank">публичной офертой</a> <span class="text-danger">*</span>
+                                    </label>
+                                </div>
+                                <div class="mb-3 form-check">
+                                    <input type="checkbox" class="form-check-input" id="regDataConsent" name="regDataConsent" required>
+                                    <label class="form-check-label" for="regDataConsent">
+                                        Я согласен на обработку персональных данных <span class="text-danger">*</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Реферальный код (опционально) -->
+                        <div class="mb-3">
+                            <label for="referralCode" class="form-label">Реферальный код (необязательно):</label>
+                            <input type="text" class="form-control" id="referralCode" name="referralCode" placeholder="Введите код друга">
+                        </div>
+                        
+                        <!-- Кнопка перехода к оплате -->
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-lg" id="guestGoToPaymentBtn" style="display: none;">
+                            <button type="button" class="btn btn-primary btn-lg" id="guestGoToPaymentBtn">
                                 <i class="bi bi-credit-card"></i> Перейти к оплате
                             </button>
                         </div>
