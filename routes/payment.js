@@ -128,17 +128,33 @@ router.post('/purchase', [
   body('bonusAmount').optional().isInt({ min: 0 }).withMessage('Неверная сумма бонусов'),
   body('referralCode').optional().trim()
 ], async (req, res) => {
+  // Логирование для отладки
+  console.log('=== POST /payment/purchase ===');
+  console.log('Сессия userId:', req.session?.userId);
+  console.log('Сессия существует:', !!req.session);
+  console.log('Body:', req.body);
+  
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    console.log('Ошибки валидации:', errors.array());
     return res.redirect(`/payment?type=${req.body.subscriptionType}&duration=${req.body.subscriptionDuration}&error=${encodeURIComponent(errors.array()[0].msg)}`);
   }
 
   try {
     const { subscriptionType, subscriptionDuration, bonusAmount, referralCode } = req.body;
+    
+    // Проверяем сессию перед запросом к БД
+    if (!req.session?.userId) {
+      console.error('Сессия потеряна в начале POST /payment/purchase');
+      return res.redirect('/auth/login?error=Сессия истекла. Пожалуйста, войдите снова.');
+    }
+    
     const user = await User.findByPk(req.session.userId);
+    console.log('Пользователь найден:', user ? user.id : 'не найден');
 
     if (!user) {
-      return res.redirect('/auth/login');
+      console.error('Пользователь не найден для userId:', req.session.userId);
+      return res.redirect('/auth/login?error=Пользователь не найден');
     }
 
     const basePrice = PRICES[subscriptionType][parseInt(subscriptionDuration)];
@@ -284,25 +300,58 @@ router.post('/purchase', [
     
     // Создание платежа в Finik
     try {
+      console.log('Создание платежа Finik для пользователя:', req.session.userId);
+      console.log('Payment URL будет:', redirectUrl);
+      
       const paymentResult = await createPayment(finikPaymentData);
       
       if (paymentResult.success && paymentResult.paymentUrl) {
+        console.log('Платеж создан успешно, редирект на:', paymentResult.paymentUrl);
         // Редиректим пользователя на страницу оплаты Finik
         return res.redirect(paymentResult.paymentUrl);
       } else {
+        console.error('Платеж не создан, результат:', paymentResult);
         // Удаляем подписку, если платеж не создан
         await subscription.destroy();
+        // Проверяем сессию перед редиректом
+        if (!req.session.userId) {
+          console.error('Сессия потеряна при ошибке создания платежа');
+          return res.redirect('/auth/login?error=Сессия истекла. Пожалуйста, войдите снова.');
+        }
         return res.redirect(`/payment?type=${subscriptionType}&duration=${subscriptionDuration}&error=Ошибка при создании платежа`);
       }
     } catch (error) {
       console.error('Ошибка создания платежа Finik:', error);
+      console.error('Пользователь:', req.session.userId);
+      console.error('Сессия существует:', !!req.session.userId);
+      
       // Удаляем подписку при ошибке
-      await subscription.destroy();
+      try {
+        await subscription.destroy();
+      } catch (destroyError) {
+        console.error('Ошибка при удалении подписки:', destroyError);
+      }
+      
+      // Проверяем сессию перед редиректом
+      if (!req.session.userId) {
+        console.error('Сессия потеряна при ошибке');
+        return res.redirect('/auth/login?error=Сессия истекла. Пожалуйста, войдите снова.');
+      }
+      
       return res.redirect(`/payment?type=${subscriptionType}&duration=${subscriptionDuration}&error=Ошибка при создании платежа: ${error.message}`);
     }
   } catch (error) {
     console.error('Ошибка оформления подписки:', error);
-    res.redirect(`/payment?type=${req.body.subscriptionType}&duration=${req.body.subscriptionDuration}&error=Ошибка при оформлении подписки`);
+    console.error('Пользователь:', req.session?.userId);
+    console.error('Сессия существует:', !!req.session?.userId);
+    
+    // Проверяем сессию перед редиректом
+    if (!req.session?.userId) {
+      console.error('Сессия потеряна при общей ошибке');
+      return res.redirect('/auth/login?error=Сессия истекла. Пожалуйста, войдите снова.');
+    }
+    
+    res.redirect(`/payment?type=${req.body?.subscriptionType || 'individual'}&duration=${req.body?.subscriptionDuration || '1'}&error=Ошибка при оформлении подписки`);
   }
 });
 
