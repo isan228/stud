@@ -147,10 +147,29 @@ app.use((req, res, next) => {
     console.log('=== Session Debug ===');
     console.log('Path:', req.path);
     console.log('Original URL:', req.originalUrl);
-    console.log('Session ID from cookie:', req.cookies['connect.sid']);
+    console.log('Session ID from cookie (raw):', req.cookies['connect.sid']);
+    console.log('Session ID from cookie (signed):', req.signedCookies['connect.sid']);
     console.log('Session ID from session:', req.sessionID);
     console.log('Session userId:', req.session?.userId);
     console.log('Cookie header:', req.headers.cookie);
+    console.log('All cookies:', req.cookies);
+    console.log('All signed cookies:', req.signedCookies);
+    
+    // Проверяем, есть ли сессия в БД
+    if (req.cookies['connect.sid'] || req.signedCookies['connect.sid']) {
+      const sessionId = req.signedCookies['connect.sid'] || req.cookies['connect.sid'];
+      pgPool.query('SELECT sess FROM session WHERE sid = $1', [sessionId])
+        .then(result => {
+          if (result.rows.length > 0) {
+            console.log('Сессия найдена в БД:', JSON.stringify(result.rows[0].sess).substring(0, 100));
+          } else {
+            console.log('Сессия НЕ найдена в БД для ID:', sessionId);
+          }
+        })
+        .catch(err => {
+          console.error('Ошибка проверки сессии в БД:', err);
+        });
+    }
   }
   next();
 });
