@@ -58,13 +58,29 @@ router.post('/register', [
 
     req.session.userId = user.id;
     req.session.userNickname = user.nickname;
-
-    // Если указана подписка, переходим на страницу оплаты
-    if (subscriptionType && subscriptionDuration) {
-      res.redirect(`/payment?type=${subscriptionType}&duration=${subscriptionDuration}`);
-    } else {
-      res.redirect('/profile');
-    }
+    
+    console.log('=== Регистрация успешна ===');
+    console.log('User ID:', user.id);
+    console.log('Session ID:', req.sessionID);
+    console.log('Session userId после установки:', req.session.userId);
+    
+    // Сохраняем сессию перед редиректом
+    req.session.save((err) => {
+      if (err) {
+        console.error('Ошибка сохранения сессии после регистрации:', err);
+        return res.redirect('/subscription?error=' + encodeURIComponent('Ошибка при сохранении сессии. Попробуйте войти.'));
+      }
+      
+      console.log('Сессия сохранена, userId:', req.session.userId);
+      
+      // Если указана подписка, переходим на страницу оплаты
+      if (subscriptionType && subscriptionDuration) {
+        console.log('Редирект на /payment с параметрами:', subscriptionType, subscriptionDuration);
+        res.redirect(`/payment?type=${subscriptionType}&duration=${subscriptionDuration}`);
+      } else {
+        res.redirect('/profile');
+      }
+    });
   } catch (error) {
     console.error('Ошибка регистрации:', error);
     res.redirect('/subscription?error=' + encodeURIComponent('Ошибка при регистрации. Попробуйте позже.'));
@@ -102,13 +118,28 @@ router.post('/login', async (req, res) => {
     req.session.isAdmin = user.isAdmin;
     req.session.isModerator = user.isModerator;
     req.session.loginTime = new Date();
-
-    // Редирект администратора в админку
-    if (user.isAdmin) {
-      res.redirect('/admin');
-    } else {
-      res.redirect('/profile');
-    }
+    
+    console.log('=== Вход успешен ===');
+    console.log('User ID:', user.id);
+    console.log('Session ID:', req.sessionID);
+    console.log('Session userId после установки:', req.session.userId);
+    
+    // Сохраняем сессию перед редиректом
+    req.session.save((err) => {
+      if (err) {
+        console.error('Ошибка сохранения сессии после входа:', err);
+        return res.render('login', { error: 'Ошибка при сохранении сессии. Попробуйте еще раз.' });
+      }
+      
+      console.log('Сессия сохранена, userId:', req.session.userId);
+      
+      // Редирект администратора в админку
+      if (user.isAdmin) {
+        res.redirect('/admin');
+      } else {
+        res.redirect('/profile');
+      }
+    });
   } catch (error) {
     console.error('Ошибка входа:', error);
     res.render('login', { error: 'Ошибка при входе. Попробуйте позже.' });
