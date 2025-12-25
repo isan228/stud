@@ -64,7 +64,7 @@ router.post('/register', [
     console.log('Session ID:', req.sessionID);
     console.log('Session userId после установки:', req.session.userId);
     
-    // Сохраняем сессию перед редиректом
+    // Сохраняем сессию и устанавливаем cookie явно
     req.session.save((err) => {
       if (err) {
         console.error('Ошибка сохранения сессии после регистрации:', err);
@@ -72,13 +72,30 @@ router.post('/register', [
       }
       
       console.log('Сессия сохранена, userId:', req.session.userId);
+      console.log('Session ID после сохранения:', req.sessionID);
+      
+      // Устанавливаем cookie явно (на случай, если она не установилась автоматически)
+      if (req.sessionID) {
+        const cookieName = 'connect.sid';
+        const cookieValue = req.sessionID;
+        const cookieOptions = {
+          maxAge: 24 * 60 * 60 * 1000, // 24 часа
+          httpOnly: true,
+          secure: process.env.SECURE_COOKIES === 'true' || false,
+          sameSite: process.env.SECURE_COOKIES === 'true' ? 'none' : 'lax'
+        };
+        res.cookie(cookieName, cookieValue, cookieOptions);
+        console.log('Cookie установлена явно:', cookieName, cookieValue.substring(0, 20) + '...');
+      }
+      
+      console.log('Cookie перед редиректом:', req.headers.cookie);
+      console.log('Set-Cookie заголовки:', res.getHeader('Set-Cookie'));
       
       // Если указана подписка, переходим на страницу оплаты
       if (subscriptionType && subscriptionDuration) {
         const paymentUrl = `/payment?type=${encodeURIComponent(subscriptionType)}&duration=${encodeURIComponent(subscriptionDuration)}`;
         console.log('Редирект на /payment с параметрами:', subscriptionType, subscriptionDuration);
         console.log('Полный URL редиректа:', paymentUrl);
-        console.log('Cookie перед редиректом:', req.headers.cookie);
         res.redirect(paymentUrl);
       } else {
         res.redirect('/profile');
