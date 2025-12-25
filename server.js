@@ -69,8 +69,7 @@ const pgPool = new Pool({
   database: process.env.DB_NAME || 'studd'
 });
 
-// Секрет для сессий - должен быть одинаковым везде
-const sessionSecret = process.env.SESSION_SECRET || 'stud-platform-secret-key-2025';
+// Логируем используемый secret
 console.log('Session secret используется:', sessionSecret.substring(0, 10) + '...');
 
 // Функция для создания таблицы session, если её нет
