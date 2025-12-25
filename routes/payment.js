@@ -21,14 +21,20 @@ const PRICES = {
 // Страница оплаты
 router.get('/', async (req, res) => {
   try {
+    console.log('=== GET /payment ===');
+    console.log('Сессия userId:', req.session?.userId);
+    console.log('Query params:', req.query);
+    
     const { type, duration } = req.query;
-    const user = await User.findByPk(req.session.userId);
+    const user = await User.findByPk(req.session?.userId);
 
     if (!user) {
-      return res.redirect('/auth/login');
+      console.log('Пользователь не найден, редирект на /auth/login');
+      return res.redirect('/auth/login?error=Необходима авторизация');
     }
 
     if (!type || !duration) {
+      console.log('Отсутствуют type или duration, редирект на /subscription');
       return res.redirect('/subscription?error=Выберите тип и длительность подписки');
     }
 
@@ -325,10 +331,17 @@ router.post('/purchase', [
         }
       } else {
         console.error('Платеж не создан, результат:', paymentResult);
+        console.error('Ошибка создания платежа, paymentResult:', JSON.stringify(paymentResult, null, 2));
+        
         // Удаляем подписку, если платеж не создан
-        await subscription.destroy();
+        try {
+          await subscription.destroy();
+        } catch (destroyError) {
+          console.error('Ошибка при удалении подписки:', destroyError);
+        }
+        
         // Проверяем сессию перед редиректом
-        if (!req.session.userId) {
+        if (!req.session?.userId) {
           console.error('Сессия потеряна при ошибке создания платежа');
           const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
           if (isAjax) {
@@ -338,10 +351,15 @@ router.post('/purchase', [
         }
         
         const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
+        const errorMessage = paymentResult.error || paymentResult.message || 'Ошибка при создании платежа';
+        
         if (isAjax) {
-          return res.status(400).json({ error: 'Ошибка при создании платежа' });
+          return res.status(400).json({ error: errorMessage });
         }
-        return res.redirect(`/payment?type=${subscriptionType}&duration=${subscriptionDuration}&error=Ошибка при создании платежа`);
+        
+        // Редиректим на страницу подписки с ошибкой, чтобы пользователь мог попробовать снова
+        console.log('Редирект на /subscription с ошибкой:', errorMessage);
+        return res.redirect(`/subscription?error=${encodeURIComponent(errorMessage)}`);
       }
     } catch (error) {
       console.error('Ошибка создания платежа Finik:', error);
@@ -366,10 +384,15 @@ router.post('/purchase', [
       }
       
       const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
+      const errorMessage = error.message || 'Ошибка при создании платежа';
+      
       if (isAjax) {
-        return res.status(500).json({ error: `Ошибка при создании платежа: ${error.message}` });
+        return res.status(500).json({ error: `Ошибка при создании платежа: ${errorMessage}` });
       }
-      return res.redirect(`/payment?type=${subscriptionType}&duration=${subscriptionDuration}&error=Ошибка при создании платежа: ${error.message}`);
+      
+      // Редиректим на страницу подписки с ошибкой
+      console.log('Редирект на /subscription с ошибкой:', errorMessage);
+      return res.redirect(`/subscription?error=${encodeURIComponent(errorMessage)}`);
     }
   } catch (error) {
     console.error('Ошибка оформления подписки:', error);
@@ -382,7 +405,10 @@ router.post('/purchase', [
       return res.redirect('/auth/login?error=Сессия истекла. Пожалуйста, войдите снова.');
     }
     
-    res.redirect(`/payment?type=${req.body?.subscriptionType || 'individual'}&duration=${req.body?.subscriptionDuration || '1'}&error=Ошибка при оформлении подписки`);
+    // Редиректим на страницу подписки с ошибкой
+    const errorMessage = error.message || 'Ошибка при оформлении подписки';
+    console.log('Редирект на /subscription с ошибкой:', errorMessage);
+    res.redirect(`/subscription?error=${encodeURIComponent(errorMessage)}`);
   }
 });
 
