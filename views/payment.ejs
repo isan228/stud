@@ -167,7 +167,7 @@ let referralDiscount = 0;
 
 function calculateTotal() {
     const bonusAmount = parseInt(document.getElementById('bonusAmount')?.value || 0);
-    const bonusBalance = <%= user.bonusBalance || 0 %>;
+    const bonusBalance = <%= (typeof user !== 'undefined' && user && user.bonusBalance) ? user.bonusBalance : 0 %>;
     const bonusToUse = Math.min(bonusAmount, bonusBalance, basePrice - referralDiscount);
     
     // Реферальный код дает скидку 50 сом
