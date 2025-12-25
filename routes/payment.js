@@ -440,6 +440,7 @@ router.post('/purchase', [
     };
     
     // Формируем объект Data для Finik
+    // Finik API может не принимать вложенные объекты, поэтому передаем данные в плоском формате
     const finikData = {
       subscriptionId: subscription.id,
       subscriptionType: subscriptionType,
@@ -450,16 +451,16 @@ router.post('/purchase', [
     if (user) {
       finikData.userId = user.id;
     } else {
-      // Если пользователь не авторизован, сохраняем данные регистрации
-      // Передаем как обычный объект, а не JSON строку, чтобы не нарушать формат подписи
-      finikData.registrationData = {
-        nickname: nickname.trim(),
-        email: email.trim(),
-        password: password, // Пароль будет захеширован при создании пользователя
-        publicOffer: publicOffer,
-        dataConsent: dataConsent,
-        referralCode: referralCode ? referralCode.trim() : null
-      };
+      // Если пользователь не авторизован, сохраняем данные регистрации в плоском формате
+      // Это может помочь избежать проблем с формированием канонической строки для подписи
+      finikData.regNickname = nickname.trim();
+      finikData.regEmail = email.trim();
+      finikData.regPassword = password; // Пароль будет захеширован при создании пользователя
+      finikData.regPublicOffer = publicOffer;
+      finikData.regDataConsent = dataConsent;
+      if (referralCode && referralCode.trim()) {
+        finikData.regReferralCode = referralCode.trim();
+      }
     }
     
     const finikPaymentData = {
