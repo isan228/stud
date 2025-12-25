@@ -39,10 +39,11 @@ function buildCanonicalStringForSigning(requestData) {
   });
   
   // Сортируем и формируем строку заголовков
+  // ВАЖНО: Заголовки должны быть разделены через \n, а не через &
   const sortedHeaderKeys = Object.keys(headerMap).sort();
   const headerString = sortedHeaderKeys
     .map(key => `${key}:${headerMap[key]}`)
-    .join('&');
+    .join('\n');
   
   // 4. Query параметры (если есть)
   let queryString = '';
